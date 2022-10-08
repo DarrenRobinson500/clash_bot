@@ -22,7 +22,7 @@ def create_double_screen(account):
 
     # save the image
     post = datetime.now().strftime('%I%M%p')
-    x = f'attacks{account}/attack {post}.png'
+    x = f'images/attacks{account}/attack {post}.png'
     cv2.imwrite(x, img)
     return img
 
@@ -34,14 +34,14 @@ def get_double_screen():
 
 def get_double_screen_full():
     start()
-    goto("find_a_match")
+    goto(find_a_match)
     time.sleep(1)
     for _ in range(2): pag.scroll(300)
     pag.screenshot('temp/attacking1.png')
     time.sleep(1)
     for _ in range(4): pag.scroll(-300)
     pag.screenshot('temp/attacking2.png')
-    goto("main")
+    goto(main)
     end()
 
 # account = 1
@@ -49,12 +49,12 @@ def get_double_screen_full():
 # create_double_screen(account)
 
 start()
-goto("find_a_match")
+goto(find_a_match)
 
 img1 = cv2.imread('temp/attacking.png', 1)
 result = ram_drop_point(img1)
 print(result)
-goto("main")
+goto(main)
 end()
 time.sleep(1.3)
 click_cv2('image')

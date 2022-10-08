@@ -12,3 +12,4 @@ def mouse_location():
         print('\n')
 
 mouse_location()
+

@@ -9,6 +9,118 @@ from collections import Counter
 
 OBJECTS_B = dir_to_list('attack_b')
 BUSHES = dir_to_list('trees')
+MINES = dir_to_list('mines')
+
+
+def get_screenshot(region=None, colour=0, filename="temp"):
+    try:
+        pag.screenshot(f'temp/{filename}.png', region=region)
+        return cv2.imread(f'temp/{filename}.png', colour)
+    except:
+        return None
+
+def find(image, screen, text="", show_image=False):
+    if image is None:
+        print("Find - No image provided:", text)
+        return 0,0,0
+    if show_image:
+        show(image)
+        show(screen)
+    y, x = image.shape
+    # print("Find", image.shape, screen.shape)
+    result = cv2.matchTemplate(screen, image, method)
+    min_val, val, min_loc, loc = cv2.minMaxLoc(result)
+    rect = (loc[0], loc[1], x, y)
+    # print("Find", text, round(val,2))
+    return val, loc, rect
+
+def click(image, region=None, confidence=0.6, show_image=False):
+    if image is None:
+        print("No image provided")
+        return 0
+    screen = get_screenshot(region)
+    if show_image:
+        show(image)
+        show(screen)
+    y, x = image.shape
+    result = cv2.matchTemplate(screen, image, method)
+    min_val, val, min_loc, loc = cv2.minMaxLoc(result)
+    if region:
+        spot = (int(region[0] + loc[0] + x / 2), int(region[1] + loc[1] + y / 2))
+    else:
+        spot = (int(loc[0] + x / 2), int(loc[1] + y / 2))
+    outcome = False
+    if val > confidence:
+        pag.click(spot)
+        outcome = True
+        # print("Click spot", spot)
+    return val, outcome
+
+def wait(templates, regions, dur=5):
+    for x in range(dur):
+        result = find_images_bool(templates, regions, show_image=False)
+        if result: return True
+        time.sleep(1)
+    return result
+
+def find_images_bool(templates, regions=None, val_min=0.6, val_max=1.0, return_val=False, show_image=False):
+    if len(templates) == 0:
+        print("Find image: no image provided")
+        return None
+    if show_image:
+        for template in templates:
+            show(template, scale=0.7)
+
+    best_val = 0
+    best_rect = None
+    found = False
+    if regions is None or len(regions) == 0:
+        screen = get_screenshot()
+        if show_image:
+            show(screen, scale=0.7)
+
+        for template in templates:
+            if template is not None:
+                result = cv2.matchTemplate(screen, template, method)
+                min_val, val, min_loc, loc = cv2.minMaxLoc(result)
+                if val_min <= val <= val_max:
+                    found = True
+                    best_val = val
+                    y, x = template.shape
+                    best_rect = (loc[0], loc[1], x, y)
+    else:
+        for region in regions:
+            screen = get_screenshot(region)
+            if show_image:
+                show(screen, scale=0.7)
+
+            for template in templates:
+                if template is not None:
+                    if template.shape[0] > screen.shape[0]:
+                        # print(region, template)
+                        print("Find Images Bool - Region too small", region[2], region[3], template.shape)
+                        region = [region[0], region[1], template.shape[1], region[3]]
+                        screen = get_screenshot(region)
+                    if template.shape[1] > screen.shape[1]:
+                        print("Find Images Bool - Region too small", region[2], region[3], template.shape)
+                        region = [region[0], region[1], region[2], template.shape[0],]
+                        screen = get_screenshot(region)
+
+                    # print("Find images bool:", screen.shape, template.shape)
+                    result = cv2.matchTemplate(screen, template, method)
+                    min_val, val, min_loc, loc = cv2.minMaxLoc(result)
+                    if val_min <= val <= val_max:
+                        found = True
+                        best_val = val
+                        best_loc = None
+                    # print("Find images bool: ", val_min, round(val,2), val_max, found)
+                else:
+                    print("Find images bool: Template not found")
+    if return_val:
+        return found, best_val, best_rect
+    else:
+        return found
+
 
 # ==========================
 # === Object recognition ===
@@ -25,25 +137,21 @@ def simplify(i, gradients=2):
             l.append((pixel[0],pixel[1],pixel[2]))
     return new, Counter(l)
 
-def check_colour_rect(region):
+def check_colour_rect(region, show_image=False, text=""):
     # print("Check colour rect")
     pag.screenshot('temp/temp_colour.png', region)
     image = cv2.imread('temp/temp_colour.png', 1)
-
-    # cv2.imshow(f'Colour Check', image)
-    # cv2.waitKey(0)
-    # cv2.destroyAllWindows()image = cv2.imread('temp/temp_colour.png', 1)
+    if show_image: show(image)
 
     y, x, channels = image.shape
 
     count = 0
-    spots =[(1/4, 1/4), (1/4, 3/4), (3/4, 1/4), (3/4, 3/4),]
+    spots =[(1/4, 1/4), (1/4, 3/4), (3/4, 1/4), (3/4, 3/4),(7/8, 1/8), (0.95, 0.05)]
     for s_x, s_y in spots:
         pixel = image[int(y * s_y)][int(x * s_x)]
         blue, green, red = int(pixel[0]), int(pixel[1]), int(pixel[2])
-        if abs(blue-green) > 5 or abs(blue-red) > 5:
-            print("Check colour:", abs(blue-green), abs(blue-red))
-            count += 1
+        # print(text, s_x, s_y, blue, green, red)
+        if abs(blue-green) > 5 or abs(blue-red) > 5: count += 1
     colour = False
     if count > 1: colour = True
     return colour
@@ -70,7 +178,7 @@ def check_colour(image_str):
         if -5 < pixel[0] - pixel[1] < 5: colour = True
         if -5 < pixel[0] - pixel[2] < 5: colour = True
         # print("Check colour (pixel):", pixel, colour)
-    print("Check colour", image_str, colour)
+    # print("Check colour", image_str, colour)
     return colour
 
 def find_cv2(image_str, region='all', screen="screenshot"):
@@ -96,10 +204,11 @@ def find_cv2(image_str, region='all', screen="screenshot"):
             print("click_cv2: couldn't find file:", image_str)
         return 0, (0,0), (0,0,0,0)
     if image_str == "suggested_upgradesx":
-        show(screen)
+        show(screen, dur=10000)
         show(template)
 
     y, x = template.shape
+    # print("Find cv2 - shapes", image_str, template.shape, screen.shape)
     result = cv2.matchTemplate(screen, template, method)
     min_val, val, min_loc, loc = cv2.minMaxLoc(result)
     val = round(val,2)
@@ -130,8 +239,6 @@ def find_cv2_image(image_str, screen_colour):
 
     rect = (loc[0], loc[1], x, y)
     return val, loc, rect
-
-
 
 def find_many_number(template, i, confidence=0.75):
     file_name = f'numbers2/{template}.png'
@@ -239,6 +346,8 @@ def find_many_img(templates, img, confidence=0.6):
             print("Find many img: couldn't find file:", template_str)
         else:
             h, w = template.shape
+            # print("Image shape:", img.shape)
+            # print("Template shape:", template.shape)
             result = cv2.matchTemplate(img, template, method)
             yloc, xloc = np.where(result >= confidence)
             z = zip(xloc, yloc)
@@ -248,6 +357,8 @@ def find_many_img(templates, img, confidence=0.6):
                 rects.append([int(x), int(y), int(w), int(h)])
     rects, weights = cv2.groupRectangles(rects, 1, 0.2)
     return rects
+
+
 
 def find_many_array(templates, region='all', confidence=0.6):
 # Get screen
@@ -274,7 +385,7 @@ def find_many_array(templates, region='all', confidence=0.6):
             for (x, y) in z:
                 rects.append([int(x), int(y), int(w), int(h)])
                 rects.append([int(x), int(y), int(w), int(h)])
-            print(template_str, len(rects))
+            # print(template_str, len(rects))
     rects, weights = cv2.groupRectangles(rects, 1, 0.2)
 
     return rects
@@ -298,7 +409,7 @@ def wait_cv2(image_str, region='all', confidence=0.7, max_time=20):
         val = round(val, 2)
 
         if val > confidence:
-            print("wait_cv2", image_str, val)
+            # print("wait_cv2", image_str, val)
             return val
         else:
             time.sleep(1)
@@ -308,7 +419,7 @@ def wait_cv2(image_str, region='all', confidence=0.7, max_time=20):
     return
 
 def wait_many(images, confidence=0.7, max_time=10):
-    print("Wait many")
+    # print("Wait many")
     templates = []
     for x, region in images:
         template = cv2.imread(f'images/{x}.png', 0)
@@ -336,7 +447,7 @@ def wait_many(images, confidence=0.7, max_time=10):
             result = cv2.matchTemplate(screen, template, method)
             min_val, val, min_loc, loc = cv2.minMaxLoc(result)
             if val > confidence:
-                print("Wait many", images, round(val, 2))
+                # print("Wait many", images, round(val, 2))
                 return val
 
         # Iterate every second
@@ -346,11 +457,26 @@ def wait_many(images, confidence=0.7, max_time=10):
             print("Wait many failure")
             return False
 
+def dist(a,b):
+    x = a[0] - b[0]
+    y = a[1] - b[1]
+    dist = (x**2 + y**2) ** 0.5
+    return dist
+
+def click_move(a):
+    b = pag.position()
+    distance = dist(a,b)
+    pag.moveTo(a[0], a[1], distance/2400)
+    pag.click(a)
+
 def click_cv2(image_str, region='all', confidence=0.6):
-    if region == 'all':
-        pag.screenshot('temp/temp.png')
-    else:
-        pag.screenshot('temp/temp.png', region=region)
+    try:
+        if region == 'all':
+            pag.screenshot('temp/temp.png')
+        else:
+            pag.screenshot('temp/temp.png', region=region)
+    except:
+        pass
     screen = cv2.imread('temp/temp.png', 0)
     template = cv2.imread(f'images/{image_str}.png', 0)
     if template is None:
@@ -365,20 +491,46 @@ def click_cv2(image_str, region='all', confidence=0.6):
     # print("click_cv:", image_str, val, loc)
     if val > confidence:
         if region == 'all':
-            pag.click(loc[0] + x/2, loc[1] + y/2)
+            a = (loc[0] + x/2, loc[1] + y/2)
             # print(loc)
         else:
-            pag.click(region[0] + loc[0] + x / 2, region[1] + loc[1] + y / 2)
+            a = region[0] + loc[0] + x / 2, region[1] + loc[1] + y / 2
+
+        click_move(a)
 
         time.sleep(0.25)
         return val, True
     # print(f"click_cv2: {image_str} val={round(val,2)} (vs {confidence}) loc={loc}")
     return val, False
 
+def wait_and_click(image, confidence=0.6):
+    print("Wait and click:", image)
+    found = False
+    count = 0
+    while not found:
+        val, loc, rect = find_cv2(image)
+        # print("Wait and click:", image, val)
+        if val > confidence:
+            click_cv2(image, confidence=confidence)
+            return True
+        else:
+            # print(f"{image} {count}")
+            time.sleep(1)
+            count += 1
+        if count == 60:
+            wait_and_click('bluestacks_icon')
+        if count > 120:
+            return
+    return
+
+
 def click_rect(rectangle,region=None):
     if not region: region = (0,0,0,0)
     x, y, w, h = rectangle
-    pag.click(region[0] + x + w/2, region[1] + y + h/2)
+    x_coord = region[0] + x + w/2
+    y_coord = region[1] + y + h/2
+    # pag.moveTo(x_coord, y_coord, 0.3)
+    pag.click(x_coord, y_coord)
     return
 
 def town_hall(img):
@@ -413,7 +565,7 @@ def town_hall(img):
             x = int(location[0] + w / 2)
             y = int(location[1] + h / 2)
             max_loc = (x, y)
-    print("Town Hall Identified as:", max_th)
+    # print("Town Hall Identified as:", max_th)
     return max_th, max_loc
 
 def find_best(images, screen):
@@ -453,7 +605,7 @@ def bad_wizards():
         if val > max_value:
             max_value = val
     if max_value > 0.7:
-        print("Found a bad wizard")
+        # print("Found a bad wizard")
         return True
     return False
 
@@ -579,10 +731,10 @@ def objects_b(loc_th):
     dist_bl = 0
     dist_br = 0
     for rect in rects:
-        print(rect)
+        # print(rect)
         # if not rect: continue
         loc = pag.center(rect)
-        print("Objects b", loc, loc_th)
+        # print("Objects b", loc, loc_th)
         try:
             dist = abs(loc[0]-loc_th[0]) + int((abs(loc[1]-loc_th[1])) / scale)
         except:
@@ -621,7 +773,7 @@ def objects_b(loc_th):
 
     # save and show the image
     cv2.imwrite('temp/attacking_b3.png', img_orig)
-    show(img_orig)
+    # show(img_orig)
     return attack_a, attack_b
 
 def ram_drop_point(account, img):
@@ -643,9 +795,9 @@ def ram_drop_point(account, img):
         result_eagle = True
     x_eagle, y_eagle = pag.center(rect)
 
-    print("Ram drop point - TH and Eagle results", result_th, result_eagle)
+    # print("Ram drop point - TH and Eagle results", result_th, result_eagle)
     if not (result_eagle and result_th):
-        print("Ram drop point - Couldn't find TH or Eagle")
+        # print("Ram drop point - Couldn't find TH or Eagle")
         return
     if x_eagle == x_th:
         m_eagle = 100
@@ -672,11 +824,64 @@ def ram_drop_point(account, img):
 
     # save the image
     post = datetime.now().strftime('%I%M%p')
-    x = f'attacks{account}/attack {post}.png'
+    x = f'images/attacks{account.number}/attack {post}.png'
     cv2.imwrite(x, img_orig)
     cv2.imwrite("temp/attack.png", img_orig)
 
     return best_dp
+
+def get_drop_points(account, img, center, target_locs):
+    # print("Get drop points")
+    if img is None:
+        # print("Get drop points - image not supplied")
+        return
+
+    cv2.circle(img, center, 20, (255, 0, 0), -1)
+
+    x_center, y_center = center
+
+    drop_points = []
+
+    for target_loc in target_locs:
+        x_target, y_target = pag.center(target_loc)
+        if x_target == x_center:
+            m_target = 100
+        else:
+            m_target = (y_target - y_center) / (x_target - x_center)
+            m_target = int(min(100, m_target))
+
+        best_dp_distance = 1000
+        best_dp = None
+
+        for x0, y0, m0 in lines:
+            x_dp = int((y_target - y0 + m0 * x0 - m_target * x_target) / (m0 - m_target))
+            y_dp = int(m0 * (x_dp - x0) + y0)
+            distance = ((x_dp - x_target) ** 2 + (y_dp - y_target) ** 2) ** 0.5
+            if (x_center < x_target < x_dp or x_center > x_target > x_dp) and distance < best_dp_distance:
+                best_dp_distance = distance
+                best_dp = [x_dp, y_dp]
+
+        cv2.rectangle(img, target_loc, (0, 0, 255), 2)
+        if best_dp_distance < 150:
+            cv2.rectangle(img, target_loc, (255, 255, 255), 2)
+            drop_points.append(best_dp)
+            cv2.circle(img, best_dp, 20, (255,255,255), -1)
+
+    cv2.line(img, top, right, (255,255,255), 2)
+    cv2.line(img, bottom, right, (255,255,255), 2)
+    cv2.line(img, top, left, (255,255,255), 2)
+    cv2.line(img, bottom, left, (255,255,255), 2)
+
+    # save the image
+    post = datetime.now().strftime('%I%M%p')
+    x = f'images/attacks{account.number}b/attack {post}.png'
+    cv2.imwrite(x, img)
+    # print("Get drop points - save the image:", x)
+
+
+    return drop_points
+
+
 
 def create_double_screen(account):
     get_double_screen()
@@ -687,42 +892,42 @@ def create_double_screen(account):
     y2_end = 900
 
     # read screenshots
-    img0 = cv2.imread('temp/attacking1.png', 1)
+    img1 = cv2.imread('temp/attacking1.png', 1)
     img2 = cv2.imread('temp/attacking2.png', 1)
 
     # find TH for alignment
-    val, rect1 = find_tower(img0, TH)
+    val, rect1 = find_tower(img1, TH)
     val, rect2 = find_tower(img2, TH)
     try:
         y_adj = rect1[1] - rect2[1]
         y2_start = y1_end - y_adj
         scroll_adj = y_adj
-        print("Scroll adjustment:", scroll_adj)
+        # print("Scroll adjustment:", scroll_adj)
     except:
-        print("Scroll adjustment not set", rect1, rect2)
+        # print("Scroll adjustment not set", rect1, rect2)
         return None
 
     # crop and combine images
-    print("Create double screen - crop and combine")
-    img1 = img0[0:        y1_end, 0: x_end]
+    # print("Create double screen - crop and combine")
+    img1 = img1[0:        y1_end, 0: x_end]
     img2 = img2[y2_start: y2_end, 0: x_end]
     img = np.concatenate((img1, img2), axis=0)
 
     # save the image
     post = datetime.now().strftime('%I%M%p')
-    x = f'attacks{account}/attack {post}.png'
-    print("Create double screen - save the image:", x)
+    x = f'images/attacks{account.number}/attack {post}.png'
+    # print("Create double screen - save the image:", x)
     cv2.imwrite(x, img)
-    print("Create double screen - return")
+    # print("Create double screen - return")
     return img
 
 def get_double_screen():
-    print("Get double screen: Going up")
+    # print("Get double screen: Going up")
     for _ in range(2): pag.scroll(300)
     pag.moveTo(1000, 500, 0.2)
     # time.sleep(0.2)
     pag.screenshot('temp/attacking1.png')
-    print("Get double screen: Going down")
+    # print("Get double screen: Going down")
     time.sleep(0.2)
     for _ in range(3): pag.scroll(-300)
     time.sleep(0.2)
@@ -730,7 +935,8 @@ def get_double_screen():
     time.sleep(0.2)
     for _ in range(5): pag.scroll(300)
 
-def show(img, dur=5000, label="Image"):
+def show(img, dur=5000, label="Image", scale=1):
+    img = cv2.resize(img, (0, 0), fx=scale, fy=scale)
     cv2.imshow(label, img)
     cv2.waitKey(dur)
     cv2.destroyAllWindows()

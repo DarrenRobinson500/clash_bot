@@ -1,7 +1,7 @@
 from image_management import only_colours, see_resources_background
 import pytesseract
-from object_recognition import *
-# from nav import goto
+from number_sets import *
+
 pytesseract.pytesseract.tesseract_cmd = "c:\\Program Files\\Tesseract-OCR\\tesseract.exe"
 
 def read_text(region, text_colours, numbers=False):
@@ -82,7 +82,7 @@ def read_army_time(region, colour=WHITE):
     found.sort(key=lambda tup: tup[1])
     for y in found:
         result += y[0]
-    print("Read army time:", found, "=>", result)
+    # print("Read army time:", found, "=>", result)
     return result
 
 def read_troop_count(region):
@@ -100,7 +100,26 @@ def read_troop_count(region):
     found.sort(key=lambda tup: tup[1])
     for y in found:
         result += y[0]
-    print("Read troop count:", found, "=>", result)
+    # print("Read troop count:", found, "=>", result)
+    return result
+
+def read_building_level():
+    pag.screenshot('temp/building_level.png', region=SELECTED_TOWER)
+
+
+
+def read_troop_count_image(i):
+    found = []
+    for y in [0,1,2,3,4,5,6,7,8,9,]:
+        rects = find_many_troop_number(str(y), i, 0.80)
+        if len(rects) > 0:
+            for rect in rects:
+                found.append((str(y), rect[0]))
+    result = ""
+    found.sort(key=lambda tup: tup[1])
+    for y in found:
+        result += y[0]
+    # print("Read troop count:", found, "=>", result)
     return result
 
 def read_cost(i):
@@ -134,7 +153,7 @@ def read_resources(i):
         prev_x = y[1]
     for y in found:
         result += y[0]
-    print("Read resources:", found, "=>", result)
+    # print("Read resources:", found, "=>", result)
     return result
 
 def read_build_time(i):
@@ -160,33 +179,33 @@ def read_build_time(i):
 
 
 
-def read_army_time_old(region, colour=WHITE):
-    SCALE = 1.29
-    pag.screenshot('temp/temp2.png', region=region)
-    i = cv2.imread(f"temp/temp2.png", 1)
-    i = cv2.resize(i, (0,0), fx=SCALE, fy=SCALE)
-    i = only_colours(i, colour)
-    i = cv2.cvtColor(i, cv2.COLOR_BGR2GRAY)
+# def read_army_time_old(region, colour=WHITE):
+#     SCALE = 1.29
+#     pag.screenshot('temp/temp2.png', region=region)
+#     i = cv2.imread(f"temp/temp2.png", 1)
+#     i = cv2.resize(i, (0,0), fx=SCALE, fy=SCALE)
+#     i = only_colours(i, colour)
+#     i = cv2.cvtColor(i, cv2.COLOR_BGR2GRAY)
+#
+#     found = []
+#     for y in [0,1,2,3,4,5,6,7,8,9,"m","s",]:
+#         rects = find_many_image(str(y), i, 0.75)
+#         if len(rects) > 0:
+#             for rect in rects:
+#                 found.append((str(y), rect[0]))
+#     result = ""
+#     found.sort(key=lambda tup: tup[1])
+#     for y in found:
+#         result += y[0]
+#     # print("Read army time:", found, "=>", result)
+#     return result
 
-    found = []
-    for y in [0,1,2,3,4,5,6,7,8,9,"m","s",]:
-        rects = find_many_image(str(y), i, 0.75)
-        if len(rects) > 0:
-            for rect in rects:
-                found.append((str(y), rect[0]))
-    result = ""
-    found.sort(key=lambda tup: tup[1])
-    for y in found:
-        result += y[0]
-    print("Read army time:", found, "=>", result)
-    return result
-
-def available_gold():
-    wait_cv2("end_battle")
-    time.sleep(1)
-    result = read_text(COIN_REGION, AVAILABLE_GOLD_COLOURS, True)
-    # print("Available Gold:", result)
-    return result
+# def available_gold():
+#     wait_cv2("end_battle")
+#     time.sleep(1)
+#     result = read_text(COIN_REGION, AVAILABLE_GOLD_COLOURS, True)
+#     # print("Available Gold:", result)
+#     return result
 
 def available_resources():
     wait_cv2("end_battle")
@@ -206,8 +225,6 @@ def available_resources():
 
     print("Available Resources:", result)
     return result
-
-
 
 def current_resources_b():
     time.sleep(1)
@@ -242,64 +259,39 @@ def waiting(seconds):
 
 def time_to_army_ready():
     time = army_time()
-    print("time_to_army_ready:", time)
+    print("Time to army ready:", time)
     return time
 
-# def army_troops():
+# def clan_troops():
 #     click_cv2("army")
 #     wait_cv2("army_tab")
 #     time.sleep(3)
-#     result = read_text(ARMY_TROOPS, WHITE, False)
-#     print(result[0:3])
-#     if result[0:3] == "rii": result = "200/200"
+#     result = read_text(CLAN_TROOPS, WHITE, False)
 #     space = result.find("/")
-#     for x in range(5):
-#         if space < 0:
-#             time.sleep(2)
-#             result = read_text(ARMY_TROOPS, WHITE, False)
-#             space = result.find("/")
+#     pag.click(85, 1000)
 #
 #     if space > 0:
 #         max_troops = result[space+1:]
-#         if max_troops == 0: max_troops = 200
+#         if max_troops == 0: max_troops = 20
 #         current_troops = result[0:space]
 #         # print(current_troops, max_troops)
 #     try:
 #         result = round(int(current_troops) / int(max_troops),2)
 #     except:
 #         result = 0
+#     print("clan_troops", result)
 #     return result
-
-def clan_troops():
-    click_cv2("army")
-    wait_cv2("army_tab")
-    time.sleep(3)
-    result = read_text(CLAN_TROOPS, WHITE, False)
-    space = result.find("/")
-    pag.click(85, 1000)
-
-    if space > 0:
-        max_troops = result[space+1:]
-        if max_troops == 0: max_troops = 20
-        current_troops = result[0:space]
-        # print(current_troops, max_troops)
-    try:
-        result = round(int(current_troops) / int(max_troops),2)
-    except:
-        result = 0
-    print("clan_troops", result)
-    return result
-
+#
 def army_time():
     result = read_army_time(ARMY_TIME, WHITE)
     try:
         if result[-1] == "s":
-            print("army_time:", 1)
+            # print("army_time:", 1)
             return 1 # ie 1 minutes
         else:
             result = int(result[0:-1])
             result = min(20, result)
-            print("army_time:", result)
+            # print("army_time:", result)
             return result
     except:
         print("army_time: Failed to read screenshot")
@@ -399,26 +391,27 @@ def text_to_time(string):
     return finish
 
 def text_to_time_2(string):
-    print(f"text_to_time_2:{string}")
+    # print(f"text_to_time_2: {string}")
+    string = string.replace("hh", "h")
     days_x = string.find("d")
     hours_x = string.find("h")
     minutes_x = string.find("m")
     seconds_x = string.find("s")
-    print(days_x, hours_x, minutes_x)
+    # print(days_x, hours_x, minutes_x)
 
     days, hours, minutes, seconds = 0,0,0,0
     if days_x != -1:
         days = string[0:days_x]
         hours = string[days_x+1:-1]
-        print("Days")
+        # print("Days")
     elif hours_x != -1:
         hours = string[:hours_x]
         minutes = string[hours_x+1:-1]
-        print("Hours")
+        # print("Hours")
     elif minutes_x != -1:
         minutes = string[0:minutes_x]
         seconds = string[minutes_x+1:-1]
-        print("Minutes")
+        # print("Minutes")
     elif seconds_x != -1:
         seconds = string[0:seconds_x-1]
     else:
@@ -445,16 +438,14 @@ def text_to_time_2(string):
     except:
         seconds = 0
 
-    print(days, hours, minutes)
+    # print(days, hours, minutes)
 
     if days == 0 and hours == 0 and minutes == 0 and seconds == 0: return None
-    print("Clean time", days, hours, minutes, seconds)
+    # print("Clean time", days, hours, minutes, seconds)
     finish = datetime.now() + timedelta(days=days) + timedelta(hours=hours) + timedelta(minutes=minutes) + timedelta(seconds=seconds)
-    print("Finish time", finish)
+    # print("Finish time", finish)
 
     return finish
-
-
 
 def string_to_time(time):
     try:
@@ -463,6 +454,7 @@ def string_to_time(time):
         return datetime.now()
 
 def time_to_string(time):
+    if time is None: return "Now"
     if time <= datetime.now():
         return "Now"
     elif time <= datetime.now() + timedelta(hours=24):

@@ -1,444 +1,560 @@
-from object_recognition import *
-from ocr import read_text
+import psutil
 
-current_location = None
+from ocr import *
+from images import *
+from regions import *
 
-# === 1. ACCOUNTS AND NAVIGATION ===
-def current_resources():
-    time.sleep(1)
-    result_array = []
-    for x in [RESOURCES_G, RESOURCES_E, RESOURCES_D]:
-        result_array.append(read_text(x, WHITE, True))
-    if result_array[0] > 20000000: result_array[0] = result_array[0]/10
-    # print("Current Resources:", result_array)
-    return result_array
+ICONS = (300, 1012, 1200, 62)
+TOP_LEFT = (0,0,300,100)
+TOP_MIDDLE = (700,0,700,300)
 
+locs = []
+latest_path = None
 
+def most_common(list, number):
+    if len(list) == 0: return None
+    number = min(number, len(list))
+    data = Counter(list).most_common(number)
+    number = min(number, len(data))
+    return data[number - 1][0]
 
-def change_accounts(account, target_base="main"):
-    global current_account
-    print("Change accounts")
-    if account != current_account:
-        if account == 1: loc = (1184, 651)
-        elif account == 3: loc = (1184, 792)
-        elif account == 2: loc = (1184, 524)
-        else: return
-        goto("switch_account")
-        pag.click(loc)
-        time.sleep(0.2)
+def hold_key(key, dur):
+    pag.keyDown(key)
+    time.sleep(dur)
+    pag.keyUp(key)
 
-        wait_many_result = wait_many([("main", BUILDER_REGION), ("master", BUILDER_B_REGION), ("otto", BUILDER_B_REGION), ("okay", OKAY_SPOT)])
-        if wait_many_result == False:
-            goto("main")
-            return
-        if find_cv2("okay")[0] > 0.5:
-            click_cv2("okay")
-            time.sleep(2)
-    goto(target_base)
-    zoom_out()
-    current_account = account
-    if info['gold'][account-1] is None:
-        resources = current_resources()
-        info['gold'][account-1] = resources
-    return
+class Loc():
+    def __init__(self, name, identifier=None, optional=False, accessible=True):
+        self.name = name
+        self.accessible = accessible
+        self.identifiers = [identifier, ]
+        self.paths = []
+        self.default_path = None
+        self.height = 0
+        self.id_absence = False
+        self.optional=optional
+        locs.append(self)
 
+    class Path():
+        def __init__(self, loc, destination, action, parameter, expected_loc, region=None):
+            self.loc = loc
+            self.destination = destination
+            self.action = action
+            self.parameter = parameter
+            self.expected_loc = expected_loc
+            self.actual_locs = []
+            self.region = region
+            loc.paths.append(self)
+            # Load the image for clicks
+            self.image = None
+            # if action in ["click", "click_p", "pycharm_to_main"]:
+            #     self.image = self.convert_parameter_to_image(parameter)
 
-def start():
-    click_cv2('bluestacks_icon')
-    time.sleep(.2)
-    pag.moveTo(1000,500)
-    pag.keyDown('ctrl')
-    for x in range(5):
-        pag.scroll(-100)
-    pag.keyUp('ctrl')
+        # def format(self):
+        #     return f"Path: {self.loc.name} -> {self.destination.name}"
+        #
+        def __str__(self):
+            return f"Path: {self.loc.name} -> {self.destination.name} ({self.expected_loc})"
 
-def end():
-    click_cv2("pycharm")
+        def add_actual_loc(self, loc):
+            if loc not in self.actual_locs:
+                self.actual_locs = [loc] + self.actual_locs[0:10]
 
-NON_DESTINATIONS = [
-    # location and image, region
-    ("okay", OKAY_SPOT),
-    ("war_okay", ALL),
-    ("donate", ALL),
-    ("attacking", ATTACKING_SPOT),
-    ("log_in_with_supercell", SUPERCELL_LOGIN_SPOT),
-    # ("splash", ALL),
-    ("return_home", ALL),
-    ("return_home_2", RETURN_HOME_2_SPOT),
-    ("reload_game", RELOAD_SPOT),
-    ("reload", RELOAD_SPOT),
-    ("try_again", RELOAD_SPOT),
-    ("red_cross", ALL),
-    ("bluestacks_message", ALL),
-    ("bluestacks_app", BLUESTACKS_APP_SPOT),
-    ("maintenance", MAINTENANCE_SPOT),
-    ("pycharm_running", PYCHARM_RUNNING_SPOT),
-    ("raid_weekend", RAID_WEEKEND_NEXT_SPOT),
-    ("raid_weekend2", RAID_WEEKEND_NEXT_SPOT),
-]
+        def most_common_actuals(self):
+            list = self.actual_locs
+            actuals = []
+            for x in range(1, 3):
+                result = most_common(list, x)
+                if result: actuals.append(result)
+            return actuals
 
-DESTINATIONS = [
-    # location and image, region
-    ("chat", CHAT_SPOT),
-    ("main", BUILDER_REGION),
-    ("builder", BUILDER_B_REGION),
-    ("otto", BUILDER_B_REGION),
-    ("army_tab", ARMY_TABS),
-    ("troops_tab", ARMY_TABS),
-    ("spells_tab", ARMY_TABS),
-    ("siege_tab", ARMY_TABS),
-    ("attack", ATTACK_SPOT),
-    ("find_a_match", FIND_A_MATCH_SPOT),
-    ("switch_account", SWITCH_ACCOUNT_SPOT),
-    ("settings", ALL),
-    ("forge", FORGE_SPOT),
-    ("attack_b", ATTACK_B_SPOT),
-]
+        def convert_parameter_to_image(self, parameter):
+            path = f'images/nav/{parameter}.png'
+            try:
+                parameter = cv2.imread(path, 0)
+                return parameter
+            except:
+                print(f"Creating location: could not find {path}")
 
-LOCATION_OVERLAYS = [
-    ("reload_game", RELOAD_SPOT),
-    ("reload", RELOAD_SPOT),
-    ("bluestacks_message", BLUESTACKS_MESSAGE_SPOT),
-    ("chat", CHAT_SPOT),
-    ("forge", FORGE_SPOT),
-    ("try_again", RELOAD_SPOT),
-    ("red_cross", ALL),
-    ("bluestacks_app", BLUESTACKS_APP_SPOT),
-    ("log_in_with_supercell", SUPERCELL_LOGIN_SPOT),
-    ("find_a_match", FIND_A_MATCH_SPOT),
-    ("battle_end_b1", ALL),
-    # ("battle_end_b2", ALL),
-]
-
-LOCATIONS = [
-    # location and image, region
-    ("main", BUILDER_REGION),
-    ("builder", BUILDER_B_REGION),
-    ("otto", BUILDER_B_REGION),
-    ("army_tab", ARMY_TABS),
-    ("troops_tab", ARMY_TABS),
-    ("spells_tab", ARMY_TABS),
-    ("siege_tab", ARMY_TABS),
-    ("attack", ATTACK_SPOT),
-    ("switch_account", SWITCH_ACCOUNT_SPOT),
-    ("settings", ALL),
-    ("attack_b", ATTACK_B_SPOT),
-    ("attacking_b", ATTACKING_B_SPOT),
-    ("battle_end_b1", ALL),
-    # ("battle_end_b2", ALL),
-    ("okay", OKAY_SPOT),
-    ("war_okay", ALL),
-    ("donate", ALL),
-    ("return_home", ALL),
-    ("return_home_2", RETURN_HOME_2_SPOT),
-    ("maintenance", MAINTENANCE_SPOT),
-    ("attacking", ATTACKING_SPOT),
-    ("pycharm_running", PYCHARM_RUNNING_SPOT),
-    ("raid_weekend", RAID_WEEKEND_NEXT_SPOT),
-    ("raid_weekend2", RAID_WEEKEND_NEXT_SPOT),
-]
-
-PATHS = {
-    # current|destination: next action
-    "main|chat": "c",
-    'main|donate': 'c',
-    "main|army_tab": "army",
-    "main|troops_tab": "army",
-    "main|spells_tab": "army",
-    "main|siege_tab": "army",
-    "main|settings": "settings",
-    "main|switch_account": "settings",
-    'main|attack': 'attack',
-    'main|find_a_match': 'attack',
-    'main|attacking': 'attack',
-    'main|forge': 'forge_path',
-    'main|builder': 'boat_to_builder',
-    'main|attack_b': 'boat_to_builder',
-    'main|attacking_b': 'boat_to_builder',
-
-    'chat|donate': 'donate',
-    'chat|other': 'esc',
-
-    'army_tab|troops_tab': 'troops_tab_dark',
-    'army_tab|spells_tab': 'spells_tab_dark',
-    'army_tab|siege_tab': 'siege_tab_dark',
-    'army_tab|other': 'esc',
-
-    'troops_tab|army_tab': 'army_tab_dark',
-    'troops_tab|spells_tab': 'spells_tab_dark',
-    'troops_tab|siege_tab': 'siege_tab_dark',
-    'troops_tab|other': 'esc',
-
-    'spells_tab|army_tab': 'army_tab_dark',
-    'spells_tab|troops_tab': 'troops_tab_dark',
-    'spells_tab|siege_tab': 'siege_tab_dark',
-    'spells_tab|other': 'esc',
-
-    'siege_tab|army_tab': 'army_tab_dark',
-    'siege_tab|troops_tab': 'troops_tab_dark',
-    'siege_tab|spells_tab': 'spells_tab_dark',
-    'siege_tab|other': 'esc',
-
-    'attack|find_a_match': 'find_a_match',
-    'attack|attacking': 'find_a_match',
-    'attack|other': 'esc',
-
-    'find_a_match|attacking': 'find_a_match',
-    'find_a_match|other': 'end_battle',
-
-    'attacking|other': 'end_battle',
-
-    'settings|switch_account': 'switch',
-    'settings|other': 'esc',
-
-    'switch_account|other': 'esc',
-
-    'forge|other': 'esc',
-
-    'builder|attack_b': 'attack_b',
-    'builder|chat': 'c',
-    'builder|settings': 'settings',
-    'builder|switch_account': 'settings',
-    'builder|attacking_b': 'attack_b',
-    'builder|other': 'boat_to_main',
-
-    'otto|attack_b': 'attack_b',
-    'otto|chat': 'c',
-    'otto|settings': 'settings',
-    'otto|switch_account': 'settings',
-    'otto|other': 'boat_to_main',
-
-    'attack_b|attacking_b': 'find_now_b',
-    'attack_b|other': 'esc',
-    'battle_end_b1|other': 'esc',
-    'battle_end_b2|other': 'esc',
-
-    'unknown|other': 'wait',
-
-    'reload_game|other': 'reload_game',
-    'reload|other': 'reload',
-    'red_cross|other': 'red_cross',
-    'okay|other': 'okay',
-    'war_okay|other': 'war_okay',
-    'try_again|other': 'try_again',
-    'return_home|other': 'return_home',
-    'return_home_2|other': 'return_home_2',
-    'bluestacks_message|other': 'bluestacks_message',
-    'log_in_with_supercell|other': 'log_in_with_supercell',
-    'maintenance|other': 'reload_maintenance',
-    'bluestacks_app|other': 'bluestacks_app',
-    'pycharm_running|other': 'bluestacks_icon',
-
-    'raid_weekend|other': 'next',
-    'raid_weekend2|other': 'raid_weekend_okay',
-
-}
-
-NEEDS_DELAY = ["reload_game", "reload", "red_cross", "okay", "war_okay", "try_again", "return_home","return_home_2", "bluestacks_message",]
-
-def loc(guess="main"):
-    global current_location
-    # print(f"Loc - current location: '{current_location}'")
-    for location, region in LOCATION_OVERLAYS:
-        val, loc, rect = find_cv2("nav/" + location, region)
-        if val > 0.65:
-            current_location = location
-            # print("Loc (overlay):", location, "- found:", val, region)
-            return location
+    def __str__(self):
+        if self.name:
+            return f"{self.name}"
         else:
-            # print("Loc (overlay):", location, "- not found:", val, region)
-            pass
+            return "No name"
 
-    if guess in ["Unknown", "", "wait",]:
-        guess = None
-    if guess in ["army_tab", "troops_tab", "spells_tab", "siege_tab"]:
-        region = ARMY_TABS
-    elif guess in ["main", ]:
-        region = BUILDER_REGION
-    elif guess in ["otto", "builder"]:
-        region = BUILDER_B_REGION
+    # def add_regions(self, regions):
+    #     self.regions += regions
+    #
+    # def show_regions(self, dur=5000):
+    #     goto(self)
+    #     screen = get_screenshot(colour=1)
+    #     for x, y, w, h in self.regions:
+    #         cv2.rectangle(screen, (x, y), (x + w, y + h), 255, 5)
+    #     show(screen, scale=0.7, dur=dur)
+    #
+    def print_loc(self):
+        print("Location:", self.name)
+        for x in self.paths:
+            print(" -", x)
+            if x.actual_locs:
+                for y in x.actual_locs:
+                    print("   -", y.name)
+
+    def add_path(self, destination, action, parameter, expected_loc, region=None):
+        self.Path(loc=self, destination=destination, action=action, parameter=parameter, expected_loc=expected_loc, region=region)
+
+    def add_default_path(self, action, parameter, expected_loc, region=None):
+        new_path = self.Path(loc=self, destination=unknown, action=action, parameter=parameter,
+                             expected_loc=expected_loc, region=region)
+        self.default_path = new_path
+
+    def add_identifier(self, image):
+        self.identifiers.append(image)
+
+    def add_height(self, height):
+        self.height = height
+
+    def perform_action(self, path):
+        action = path.action
+        parameter = path.parameter
+        image = path.image
+        expected_loc = path.expected_loc
+        region = path.region
+
+        global current_location
+        global latest_path
+
+        # print("Perform action:", action, parameter)
+        outcome = False
+        if action == "click":
+            path.parameter.click()
+            # print("Click:", round(val,2))
+        elif action == "click_p":
+            time.sleep(0.1)
+            path.parameter.click()
+            # print("Click p:", round(val,2))
+            time.sleep(0.2)
+        elif action == "pycharm_to_main":
+            time.sleep(0.1)
+            path.parameter.click()
+            # val, outcome = click(image, region=region)
+            time.sleep(0.3)
+            hold_key("down", 0.3)
+        elif action == "click_identifier":
+            self.identifiers[0].click()
+            # val, outcome = click(self.identifier_images[0])
+            # print("Clicking identifier:", val)
+        elif action == "reload":
+            close_app()
+            # click_cv2("pycharm")
+            rest_time = 20
+            for x in range(rest_time):
+                print(f"Resting {x} of {rest_time} minutes")
+                pag.moveTo(x * 10, 500)
+                time.sleep(60)
+            click_cv2('nav/bluestacks')
+            wait_and_click('start_barb')
+            wait_and_click('start_cross')
+            wait_and_click('maximise')
+            outcome = True
+        elif action == "key":
+            pag.press(parameter)
+            outcome = True
+        elif action == "key_p":
+            time.sleep(0.1)
+            pag.press(parameter)
+            time.sleep(0.1)
+            outcome = True
+        elif action == "wait":
+            time.sleep(parameter)
+            outcome = True
+        elif action == "goto_forge":
+            hold_key("a", 0.1)
+            hold_key("s", 0.1)
+            val, outcome = click_cv2("nav/forge_button")
+        elif action == "goto_builder":
+            hold_key("a", 0.1)
+            hold_key("s", 0.1)
+            val, outcome = click_cv2("nav/boat_to")
+        elif action == "goto_main":
+            hold_key("w", 0.1)
+            hold_key("d", 0.1)
+            val, outcome = click_cv2("nav/boat_to")
+        elif action == "start_bluestacks":
+            os.startfile("C:\Program Files (x86)\BlueStacks X\BlueStacks X.exe")
+            wait_and_click('heart')
+            wait_and_click('start_barb')
+            i_ad_cross.click()
+            wait_and_click('maximise')
+            outcome = True
+        elif action == "start_app":
+            click_cv2('nav/bluestacks')
+            wait_and_click('start_barb')
+            i_ad_cross.click()
+            wait_and_click('maximise')
+            outcome = True
+        elif action == "log_in":
+            self.identifiers[0].click()
+            # val, outcome = click(self.identifier_images[0])
+            # print("Clicking identifier:", val)
+            time.sleep(0.5)
+            pag.click((1184, 651))
+            # current_location = change_account
+            # change_accounts(1)
+        else:
+            print("Action not coded:", action)
+            return False
+
+        # Validate location, and store unusual outcomes
+        for identifier in expected_loc.identifiers:
+            identifier.wait()
+        current_location = loc(expected_loc)
+        # print("Current location:", current_location)
+        # if current_location != expected_loc:
+        #     print()
+
+        if current_location != expected_loc and current_location != unknown and path.destination != unknown:
+            path.add_actual_loc(current_location)
+            print(f"Actual outcome added: {path.loc.name} -> {path.destination.name}. Actual: {current_location.name}")
+            for x in path.actual_locs:
+                print("   ", x.name)
+
+        latest_path = path
+        return outcome
+
+    def goto(self, destination):
+        global current_location
+        # print(f"Loc goto: {current_location} -> {destination}")
+        path_found = False
+        path = [path for path in self.paths if path.destination == destination]
+        if path:
+            # print(f"Goto Loc: {self.name}. {path[0]}")
+            self.perform_action(path[0])
+        if not path and self.default_path:
+            # for x in self.paths:
+            #     print(x)
+            # print("Using default path. Going to", destination)
+            # print(f"Goto Loc (Default): {self.name}. {self.default_path}")
+            path_found = self.perform_action(self.default_path)
+        return path_found
+
+    def has_path(self, destination):
+        global current_location
+        # print(f"Has path: {self} -> {destination}")
+        path_found = False
+        path = [path for path in self.paths if path.destination == destination]
+        if path: return True
+        if self.default_path: return True
+        print("No path found:")
+        for x in self.paths:
+            print(x)
+        return False
+
+
+# -------------------
+# ---- LOCATIONS ----
+# -------------------
+
+pycharm = Loc(name="pycharm", identifier=i_pycharm, accessible=True)
+pycharm.height = -1
+no_app = Loc(name="no_app", identifier=i_app, accessible=False)
+no_app.id_absence = True
+no_app.id_val_max = 0.8
+no_app.height = -0.4
+no_bluestacks = Loc(name="no_bluestacks", identifier=i_bluestacks, accessible=False)
+no_bluestacks.id_absence = True
+no_bluestacks.id_val_max = 0.75
+no_bluestacks.height = -0.5
+main = Loc(name="main", identifier=i_builder, accessible=True)
+unknown = Loc(name="unknown", identifier=i_x, accessible=False)
+unknown.height = -0.5
+chat = Loc(name="chat", identifier=i_challenge, accessible=True)
+chat.height = main.height + 1
+settings = Loc(name="settings", identifier=i_settings, accessible=True)
+change_account = Loc(name="change_account", identifier=i_switch_account, accessible=True)
+forge = Loc(name="forge", identifier=i_forge, accessible=True)
+builder = Loc(name="builder", identifier=i_master_builder, accessible=True)
+builder.add_identifier(i_otto)
+
+overlays = []
+for overlay in [i_another_device, i_ad_cross, i_reload, i_reload_game, i_ad_cross, i_try_again, i_return_home, i_pre_app, i_okay, i_okay2, i_okay3, i_okay4, i_okay5,
+                i_next2, i_bluestacks_message_cross, i_return_home_2, i_return_home_3, i_red_cross, i_red_cross2, ]:
+    new_overlay = Loc(name=overlay.name[2:], identifier=overlay, accessible=False)
+    if overlay == i_another_device:
+        new_overlay.add_default_path(action="reload", parameter=None, expected_loc=main)
+        another_device = new_overlay
     else:
-        region = ALL
-    if guess:
-        val, loc, rect = find_cv2("nav/" + guess, region)
-        if val > 0.69:
-            # print("Loc:", guess, val)
-            if guess == "otto": guess = "builder"
-            return guess
-        # else:
-        #     print(f"Loc: guess failure '{guess}':", find_cv2("nav/" + guess, region)[0])
+        new_overlay.add_default_path(action="click_identifier", parameter=None,expected_loc=main)
+    new_overlay.id_val_min = 0.8
+    new_overlay.add_height(4)
+    overlays.append(new_overlay)
 
-    start_time = datetime.now()
-    prev_time = datetime.now()
-    for location, region in LOCATIONS + LOCATION_OVERLAYS:
-        val, loc, rect = find_cv2("nav/" + location, region)
-        if val > 0.65:
-            if location == "otto": location = "builder"
-            if location == "attacking":
-                val, loc, rect = find_cv2("nav/" + "find_a_match", FIND_A_MATCH_SPOT)
-                if val > 0.65: location = "find_a_match"
-            current_location = location
-            # print("Loc:", location, "- found")
-            return location
-        # else:
-            # print("Loc:", location, "- not found:", val, region)
-        current_time = datetime.now()
-        # print("Loc", location, current_time-prev_time, current_time-start_time)
-        prev_time = datetime.now()
-    # print("Loc: Unknown")
-    return "Unknown"
+log_in = Loc(name="log_in", identifier=i_log_in)
+log_in.add_default_path(action="log_in", parameter=None, expected_loc=main)
 
-def next_step(location, destination):
-    if location == destination:
-        return "None"
-    map_question = f"{location}|{destination}"
-    try:
-        result = PATHS[map_question]
-    except:
-        map_question = f"{location}|other"
-        try:
-            result = PATHS[map_question]
-        except:
-            result ="Unknown path"
-            result = "No path"
-    # print(f"Next step: {location} => {destination}: {result}" )
-    return result
+army_tab = Loc(name="army_tab", identifier=i_army_tab, accessible=True)
+troops_tab = Loc(name="troops_tab", identifier=i_troops_tab, accessible=True)
+spells_tab = Loc(name="spells_tab", identifier=i_spells_tab, accessible=True)
+siege_tab = Loc(name="siege_tab", identifier=i_siege_tab, accessible=True)
 
-def track_loc():
-    while True:
-        print(loc(current_location))
-        time.sleep(1)
+attack = Loc(name="attack", identifier=i_multiplayer, accessible=True)
+find_a_match = Loc(name="find_a_match", identifier=i_next, accessible=True)
+attacking = Loc(name="attacking", identifier=i_surrender, accessible=False)
+attacking_end_1 = Loc(name="attacking_end_1", identifier=i_surrender_okay, accessible=False)
+attack_end = Loc(name="attack_end", identifier=i_return_home, accessible=False)
+
+attack_b2 = Loc(name="attack_b2", identifier=i_versus_battle, accessible=True)
+attack_b2.height = 3
+attacking_b = Loc(name="attacking_b", identifier=i_defender, accessible=True)
+attacking_b_end_1 = Loc(name="attacking_b_end_1", identifier=i_surrender_okay, accessible=False)
+
+# ---------------
+# ---- PATHS ----
+# ---------------
+
+# Start-up
+pycharm.add_default_path(action="pycharm_to_main", parameter=i_app, expected_loc=main, region=ICONS)
+unknown.add_default_path(action="wait", parameter=0.2, expected_loc=main)
+no_bluestacks.add_default_path(action="start_bluestacks", parameter=None, expected_loc=main)
+no_app.add_default_path(action="start_app", parameter=None, expected_loc=main)
+
+# Main
+main.add_path(destination=pycharm, action="click", parameter=i_pycharm_icon, expected_loc=pycharm)
+main.add_path(destination=chat, action="key_p", parameter="c", expected_loc=chat)
+main.add_path(destination=army_tab, action="click", parameter=i_army, expected_loc=army_tab)
+main.add_path(destination=troops_tab, action="click", parameter=i_army, expected_loc=army_tab)
+main.add_path(destination=spells_tab, action="click", parameter=i_army, expected_loc=army_tab)
+main.add_path(destination=siege_tab, action="click", parameter=i_army, expected_loc=army_tab)
+main.add_path(destination=settings, action='click', parameter=i_settings_on_main, expected_loc=settings)
+main.add_path(destination=change_account, action='click', parameter=i_settings_on_main, expected_loc=settings)
+main.add_path(destination=forge, action='goto_forge', parameter='', expected_loc=forge)
+main.add_path(destination=builder, action="goto_builder", parameter='', expected_loc=builder)
+main.add_path(destination=find_a_match, action="click", parameter=i_attack, expected_loc=attack)
+main.add_path(destination=attack, action="click_p", parameter=i_attack, expected_loc=attack)
+main.add_path(destination=attack_b2, action="goto_builder", parameter="", expected_loc=builder)
+main.add_path(destination=attacking_b, action="goto_builder", parameter="", expected_loc=builder)
+
+# Builder
+builder.add_path(destination=pycharm, action="click", parameter=i_pycharm_icon, expected_loc=pycharm)
+builder.add_path(destination=chat, action="key", parameter="c", expected_loc=chat)
+builder.add_path(destination=settings, action='click', parameter=i_settings_on_main, expected_loc=settings)
+builder.add_path(destination=change_account, action='click', parameter=i_settings_on_main, expected_loc=settings)
+builder.add_path(destination=main, action="goto_main", parameter='', expected_loc=main)
+builder.add_path(destination=attack_b2, action="click", parameter=i_attack_b, expected_loc=attack_b2)
+builder.add_path(destination=attacking_b, action="click", parameter=i_attack_b, expected_loc=attack_b2)
+builder.add_default_path(action="goto_main", parameter='', expected_loc=main)
+
+# Chat
+chat.add_height(1)
+chat.add_default_path(action="key", parameter="esc", expected_loc=main)
+
+# Settings
+settings.add_path(destination=change_account, action="click_p", parameter=i_change_accounts_button, expected_loc=change_account)
+settings.add_default_path(action="key", parameter="esc", expected_loc=main)
+change_account.add_default_path(action="key_p", parameter="esc", expected_loc=settings)
+change_account.height = settings.height + 1
+
+# Forge
+forge.add_default_path(action="key", parameter="esc", expected_loc=main)
+forge.add_height(main.height + 1)
+
+# Army tabs
+army_tab.add_default_path(action="key", parameter="esc", expected_loc=main)
+troops_tab.add_default_path(action="key", parameter="esc", expected_loc=main)
+spells_tab.add_default_path(action="key", parameter="esc", expected_loc=main)
+siege_tab.add_default_path(action="key", parameter="esc", expected_loc=main)
+
+army_tab.add_path(destination=troops_tab, action="click", parameter=i_troops_tab_dark, expected_loc=troops_tab)
+army_tab.add_path(destination=spells_tab, action="click", parameter=i_spells_tab_dark, expected_loc=spells_tab)
+army_tab.add_path(destination=siege_tab, action="click", parameter=i_siege_tab_dark, expected_loc=siege_tab)
+troops_tab.add_path(destination=spells_tab, action="click", parameter=i_spells_tab_dark, expected_loc=spells_tab)
+troops_tab.add_path(destination=siege_tab, action="click", parameter=i_siege_tab_dark, expected_loc=siege_tab)
+troops_tab.add_path(destination=army_tab, action="click", parameter=i_army_tab_dark, expected_loc=army_tab)
+spells_tab.add_path(destination=troops_tab, action="click", parameter=i_troops_tab_dark, expected_loc=troops_tab)
+spells_tab.add_path(destination=siege_tab, action="click", parameter=i_siege_tab_dark, expected_loc=siege_tab)
+spells_tab.add_path(destination=army_tab, action="click", parameter=i_army_tab_dark, expected_loc=army_tab)
+siege_tab.add_path(destination=troops_tab, action="click", parameter=i_troops_tab_dark, expected_loc=troops_tab)
+siege_tab.add_path(destination=spells_tab, action="click", parameter=i_spells_tab_dark, expected_loc=spells_tab)
+siege_tab.add_path(destination=army_tab, action="click", parameter=i_army_tab_dark, expected_loc=army_tab)
+
+# Attacking
+attack.add_path(destination=find_a_match, action="click", parameter=i_find_a_match, expected_loc=find_a_match)
+find_a_match.add_default_path(action="click", parameter=i_end_battle, expected_loc=main)
+attacking.add_default_path(action="click", parameter=i_surrender, expected_loc=main)
+attack.add_default_path(action="key", parameter="esc", expected_loc=main)
+
+attack_b2.add_default_path(action="key", parameter="esc", expected_loc=builder)
+attack_b2.add_path(destination=attacking_b, action='click', parameter=i_find_now, expected_loc=attacking_b)
+attacking_b.add_default_path(action='click', parameter=i_surrender, expected_loc=attack_b2)
+attacking_b_end_1.add_default_path(action="click_identifier", parameter=None,expected_loc=attack_b2)
 
 def goto(destination):
     global current_location
-    print(f"Goto: {destination} (Guess: {current_location})")
-    current_location = loc(current_location)
-    if current_location == destination: return True
-    not_there = True
-    while not_there:
-        next = next_step(current_location, destination)
-        move(next)
-        time.sleep(0.1)
-        current_location = loc(current_location)
-        if current_location == destination: not_there = False
+    if current_location == destination: return
+    print(f"Goto: {current_location} -> {destination}")
+    loop_count = 0
+    path_found = True
+    while current_location != destination and path_found and loop_count < 5 and current_location:
+        # print("Goto (loc):", current_location)
+        path_found = current_location.has_path(destination)
+        result = current_location.goto(destination)
+        loop_count += 1
+        current_location = loc(current_location) # This validates that expectations match reality wrt location
+    if not path_found:
+        # for path in current_location.paths:
+        #     print(path)
+        # print(current_location, destination, path_found, loop_count)
+        print(f"Path not found (loc): {current_location} -> {destination}")
+    # print("Goto complete:", current_location)
+    return current_location
 
-
-def move(code):
+def loc(guess=None):
+    start_time = datetime.now()
     global current_location
-    print("Move:", code)
-    if code in ["reload"]:
-        click_cv2("pycharm")
-        rest_time = 10 # in response to personal break - which requires a shield => hopefully enough time to be attacked
-        for x in range(rest_time):
-            print(f"Resting {x} of {rest_time} minutes")
-            time.sleep(60)
-        start()
-    if code in ["bluestacks_icon"]:
-        time.sleep(5)
-    if code in ["army", "army_tab", "army_tab_dark", "troops_tab", "spells_tab", "siege_tab", "troops_tab_dark",
-                "spells_tab_dark", "siege_tab_dark", "settings", "switch", "attack", "attack_b", "find_a_match",
-                "end_battle", "reload_game", "reload", "red_cross", "okay", "war_okay", "try_again", "return_home",
-                "return_home_2", "log_in_with_supercell", "bluestacks_app", "pycharm", "next", "raid_weekend_okay",
-                "bluestacks_icon", "find_now_b"]:
-        val, success = click_cv2(code)
-        print("Move", code, val, success)
-        if code == "attack" and not success:
-            print("attack 2nd option")
-            pag.click(100, 900)
-        if code == "siege_tab_dark" and not success:
-            print("Resetting account")
-            change_accounts(1, "main")
-    elif code in ["c", "esc"]:
-        pag.press(code)
-    elif code == 'forge_path':
-        pag.click(BOTTOM_LEFT)
-        pag.drag(250, -450, 0.5, button='left')
-        val, loc, rect = find_cv2("capital_coin1")
-        print("Move (forge_path) capital_coin1", val)
-        if find_cv2("forge_path")[0] > 0.5:
-            click_cv2("forge_path", confidence=0.5)
-            current_location = "forge"
-        elif find_cv2("capital_coin")[0] > 0.5:
-            click_cv2("capital_coin", confidence=0.5)
-            current_location = "forge"
-        elif find_cv2("capital_coin1")[0] > 0.5:
-            click_cv2("capital_coin1", confidence=0.5)
-            current_location = "forge"
-    elif code == "boat_to_builder":
-        zoom_out()
-        val, loc, rect = find_cv2('boat')
-        if val > 0.55:
-            click_rect(rect)
-            return
-        pag.click(BOTTOM_LEFT)
-        pag.drag(250, -450, 0.5, button='left')
-        click_cv2('boat', confidence=0.55)
-    elif code == "boat_to_main":
-        zoom_out()
-        pag.click(TOP_RIGHT)
-        pag.drag(-250, 400, 0.5, button='left')
-        # val, loc, rect = find_cv2('boat')
-        # if val > 0.6:
-        #     click_rect(rect, BOAT_B_SPOT)
-        # else:
-        pag.click(1212,384)
-        time.sleep(1.5)
-        current_location = "main"
-    elif code == "bluestacks_message":
-        pag.click(1872,823)
-    elif code in ["Unknown", "", "wait",]:
-        time.sleep(1)
-    elif code == "reload_maintenance":
-        click_cv2("pycharm")
-        count = 5
-        while count >= 1:
-            print(f"Maintenance. Trying again in {count} minutes")
-            time.sleep(60)
-            count -= 1
-        start()
-        click_cv2("reload_maintenance")
-        time.sleep(60)
-    else:
-        print("Code not coded")
-    if code in NEEDS_DELAY:
-        time.sleep(3)
-    if code == "esc":
-        if current_location == "battle_end_b": current_location = "builder"
-    if code in ["settings", "attack",]:
-        current_location = code
-    if code == "army_tab_dark": current_location = "army_tab"
-    if code == "spells_tab_dark": current_location = "spells_tab"
-    if code == "siege_tab_dark": current_location = "siege_tab"
-
-    if code == "army": current_location = "army_tab"
-    if code == "switch": current_location = "switch_account"
-    if code == "find_a_match": current_location = "find_a_match"
-    if code == "end_battle": current_location = "war_okay"
-    if code == "war_okay": current_location = "return_home"
-    if code == "log_in_with_supercell":
-        current_location = "switch_account"
-        time.sleep(2)
-        pag.click(1184, 651)
-        global current_account
-        current_account = 1
-
-    if code == "No path":
-        time.sleep(3)
-
-def test_goto(destination):
-    # reset()
-
-    click_cv2('bluestacks_icon')
     time.sleep(0.2)
-    # pag.click(85, 1000)
-    # print(find_cv2("nav/" + 'switch_account', ARMY_TABS))
-    goto(destination)
-    click_cv2("pycharm")
 
-def test_next_step(current):
-    for loc1, region1 in [(current, ALL),]:
-        for loc2, region2 in DESTINATIONS:
-            print(f"'{loc1}|{loc2}': '{next_step(loc1, loc2)}',")
+    for identifier in another_device.identifiers:
+        if identifier.find(fast=True):
+            print("Found reload")
+            return another_device
+
+    # print("A", datetime.now() - start_time)
+    if guess and guess != unknown:
+        guesses = [guess]
+        if latest_path:
+            guesses += latest_path.most_common_actuals()
+        for guess in guesses:
+            for identifier in guess.identifiers:
+                val, loc, rect = identifier.find_detail(fast=True)
+                result = val > identifier.threshold
+                if result != guess.id_absence:
+                    # print(identifier.name, val, result, val)
+                    print("Loc guess", guess)
+                    current_location = guess
+                    return current_location
+                print("Loc guess (fail)", guess, identifier.name, val, identifier.threshold)
+
+    # if guess:
+    #     for x in range(3):
+    #         time.sleep(0.3)
+    #         for identifier in guess.identifiers:
+    #             show_image = False
+    #             if guess.name == "attack":
+    #                 show_image = False
+    #             if identifier.find(show_image=show_image) != guess.id_absence:
+    #                 current_location = guess
+    #                 return current_location
+    #             print("Loc guess (fail)", guess, identifier.name)
+
+    current_location = unknown
+    # Search all locations quickly then thoroughly
+    # print("B", datetime.now() - start_time)
+    for fast in [True, True, False]:
+        for location in locs:
+            # print("C", datetime.now() - start_time)
+            for identifier in location.identifiers:
+                val, loc, rect = identifier.find_detail(fast=fast)
+                result = val > identifier.threshold
+                if result != location.id_absence:
+                    current_location = location
+                    # print("Loc success (all locations)", location, fast, identifier.name, round(val,2), identifier.threshold, result)
+                    return current_location
+                # print("Loc fail (all locations)", location, fast, identifier.name, round(val,2), identifier.threshold, identifier.regions)
+        time.sleep(0.5)
+
+    # print("D", datetime.now() - start_time)
+    print(f"Loc: (guess unsuccessful). Guess:{guess}. Actual:{current_location}")
+
+    return current_location
+
+def click_builder():
+    print("Click builder")
+    for image in [i_builder, i_master, i_otto]:
+        result = image.click()
+        if result: return True
+
+    return False
+
+def move_list(direction, dur=0.5):
+    # dur = 0.5
+    if direction == "up":
+        pag.moveTo(855,666)
+        pag.dragTo(855,210, dur)
+    if direction == "down":
+        pag.moveTo(855,210)
+        pag.dragTo(855,666, dur)
+
+def goto_list_top(village):
+    if village == "main": goto(main)
+    else: goto(builder)
+    time.sleep(1)
+    pag.click(BOTTOM_LEFT)
+    click_builder()
+    if village == "main": region = BUILDER_LIST_REGION
+    else: region = BUILDER_B_LIST_REGION
+    at_top = False
+    count = 0
+    time.sleep(0.2)
+    while not at_top and count < 3:
+        if i_suggested_upgrades.find():
+            at_top = True
+        if not at_top:
+            move_list("down", 1)
+            time.sleep(0.2)
+        count += 1
+    time.sleep(2)
+    val, loc, rect = i_suggested_upgrades.find_detail()
+    print("Goto list top", val)
+    pag.moveTo(855, loc[1])
+    pag.dragTo(855,210, 1)
+    time.sleep(3)
+
+def goto_list_very_top(village):
+    if village == "main": goto(main)
+    else: goto(builder)
+    time.sleep(0.5)
+    pag.click(BOTTOM_LEFT)
+    click_builder()
+    at_top = False
+    count = 0
+    while not at_top and count < 5:
+        if i_upgrades_in_progress.find(show_image=False):
+            at_top = True
+        else:
+            move_list("down", 1)
+            time.sleep(0.2)
+        count += 1
+
+def format_list_of_locs(locs):
+    output = ""
+    for x in locs:
+        output += x.name + ", "
+    return output
+
+def print_locs():
+    print()
+    print("ALL LOCATIONS")
+    for x in locs:
+        print()
+        print(x.name)
+        for path in x.paths:
+            print(" -", path)
+            for added in path.actual_locs:
+                print("   -", added.name)
+
+
+
+
+
+# OLD NAV
+
+def attack_b_get_screen():
+    time.sleep(1)
+    hold_key('s', 0.5)
+    hold_key('down', 0.5)
+    time.sleep(1)
+    hold_key('down', 0.5)
+    pag.screenshot('temp/attacking_b.png')
 
 def zoom_out():
     time.sleep(1)
@@ -450,18 +566,119 @@ def zoom_out():
         pag.keyUp('ctrl')
         time.sleep(0.1)
 
-def hold_key(letter, dur):
-    pag.keyDown(letter)
-    time.sleep(dur)
-    pag.keyUp(letter)
 
-def attack_b_get_screen():
-    goto("attacking_b")
-    time.sleep(1)
+def start():
+    click_cv2('bluestacks_icon')
+    time.sleep(.2)
+    # pag.moveTo(1000,500)
+    pag.keyDown('ctrl')
+    for x in range(5):
+        pag.scroll(-100)
+    pag.keyUp('ctrl')
+
+def end():
+    click_cv2("pycharm")
+
+def change_accounts(account_number, target_base="main"):
+    global current_account
+    if current_account:
+        print(f"Change accounts from {current_account} to {account_number}")
+    if account_number == current_account: return
+    goto(change_account)
+    time.sleep(0.2)
+    loc = [(0,0), (1184, 651), (1184, 524), (1184, 792), ][account_number]
+    pag.click(loc)
+    time.sleep(0.2)
+    if target_base == "main": goto(main)
+    else: goto(builder)
     zoom_out()
-    hold_key('s', 0.5)
+    current_account = account_number
+    try:
+        if current_account.gold is None:
+            current_account.update_resources(current_resources())
+    except:
+        pass
+    return
+
+def current_resources():
     time.sleep(1)
-    zoom_out()
-    pag.screenshot('temp/attacking_b.png')
+    result_array = []
+    for x in [RESOURCES_G, RESOURCES_E, RESOURCES_D]:
+        result_array.append(read_text(x, WHITE, True))
+    if result_array[0] > 20000000: result_array[0] = result_array[0]/10
+    # print("Current Resources:", result_array)
+    return result_array
+
+def reset():
+    if "BlueStacksWeb.exe" in (p.name() for p in psutil.process_iter()):
+        print("Bluestacks Running")
+        click_cv2('bluestacks_icon')
+        goto("main")
+    else:
+        os.startfile("C:\Program Files (x86)\BlueStacks X\BlueStacks X.exe")
+        wait_cv2('start_d')
+        pag.click((338,603)) # this is the love heart
+        wait_and_click('start_eyes')
+        wait_and_click('maximise')
+        wait_cv2("attack")
+
+def open_app():
+    global current_location
+    success = False
+    while not success:
+        current_location = loc(current_location)
+        if current_location == "pycharm_running":
+            click_cv2("nav/bluestacks")
+        else:
+            click_cv2("nav/" + current_location.name)
+            if current_location == "heart": current_location = "start_eyes"
+            elif current_location == "start_eyes": current_location = "maximise"
+            elif current_location == "maximise": current_location = "main"
+        if current_location not in ["pycharm_running", "start_eyes", "heart", "maximise", ]: # loc doesn't return maximise if it finds it at the top of the screen (above y = 100)
+            success = True
+        if current_location == "pycharm_running": current_location = None
+        time.sleep(1)
+
+def close_app():
+    val, loc, rect = find_cv2("nav/close_cross")
+    if val < 0.5:
+        click_cv2('bluestacks_icon')
+        time.sleep(0.2)
+    val, loc, rect = find_cv2("nav/close_cross")
+    print(val)
+    if val > 0.6:
+        click_rect(rect)
+        time.sleep(0.2)
+        click_cv2("nav/close_close")
 
 
+
+def tour():
+    goto(main)
+    goto(chat)
+    goto(settings)
+    goto(change_account)
+    goto(forge)
+    goto(army_tab)
+    goto(troops_tab)
+    goto(spells_tab)
+    goto(siege_tab)
+    goto(attack)
+    goto(find_a_match)
+    goto(builder)
+    goto(attacking_b)
+
+
+# Set-up
+locs.sort(key=lambda x: x.height, reverse=True)
+current_location = pycharm
+# tour()
+# goto(pycharm)
+
+# goto(main)
+# print(loc())
+
+# goto(attacking_b)
+# goto(pycharm)
+
+# goto(builder)

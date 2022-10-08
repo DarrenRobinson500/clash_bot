@@ -4,8 +4,9 @@ import os
 PRINT_CV2 = False
 VERBOSE_LOG = False
 current_account = 0
-sweep_period = timedelta(minutes=20)
-ACCOUNT_NEEDS_WALLS = [1,]
+
+last_move = ["none", 0]
+BACKLOG = (160, 190, 1550, 140)
 
 BOTTOM_LEFT = (75, 1005)
 TOP_RIGHT = (1804, 57)
@@ -13,7 +14,7 @@ TOP_RIGHT = (1804, 57)
 CURRENCIES = ["elixir1", "dark", "gold", "elixir"]
 
 build_preferences_e1 = [
-    "lab", "army", "workshop", "spell_factory", "castle", "barracks", "gold_storage", "warden",
+    "lab", "castle", "army", "workshop", "spell_factory", "barracks", "gold_storage", "warden", "dark_drill",
 ]
 
 build_preferences_d = [
@@ -66,21 +67,20 @@ info = {
 DP = None
 scroll_adj = None
 
-MAX_TROPHIES = [0, 1500, 1400, 1000]
-STANDARD_DP = (540, 360)
+STANDARD_DP = (540, 340)
 STANDARD_DP2 = (540, 360)
-TROOPS = ["barb", "archer", "giant","bomb", "wizard", "bloons", "healer", "pekka", "dragon", "edrag", "super_barb", "super_goblin",]
+TROOPS_SLIDE = ["golem", "witch", "minion"]
+TROOPS = ["barb", "archer", "giant","bomb", "wizard", "bloons", "healer", "pekka", "dragon", "edrag", "super_barb", "super_goblin", ] + TROOPS_SLIDE
 SPELLS = ["lightening", "freeze", "poison"]
 SIEGE = ["ram",]
-MINES = ["gold1", "gold2", "gold3"]
 ALL_TROOPS = TROOPS + SPELLS + SIEGE
 
 HEROES_AND_RAMS = ["king", "queen","warden", "champ", "clan", "clan_ram", "clan_ram2", "ram", "ram_empty"]
 
 DONT_DONATE = ["bomb", "super_goblin", ]
-TROOP_TRAIN_EXT = ["wizard", "bomb", "super_goblin", "super_barb", "lightening", "freeze", "dragon", ]
+TROOP_TRAIN_EXT = ["wizard", "bomb", "super_goblin", "super_barb", "lightening", "freeze", "dragon", "edrag", "witch", "bloons"]
 TROOP_ATTACK_EXT = ["super_goblin", "super_barb", ]
-TROOP_DONATE_EXT = ["super_barb", "lightening","edrag"]
+TROOP_DONATE_EXT = ["super_barb", "lightening","edrag","bloons","ram",]
 
 # BUSHES = [
 #     "trees/bush", "trees/bush2",
@@ -100,8 +100,8 @@ RESOURCE_TEMPLATES = ["resources/gold", "resources/gold_b", "resources/elixir", 
 # === LINES FOR RAM RAID ===
 # ==========================
 
-x, y = 930, 120
-width, height = 680, 525
+x, y = 920, 120
+width, height = 690, 525
 
 top = (x, y)
 left = (x-width, y+height)
@@ -117,12 +117,12 @@ lines = [(top[0], top[1], grad),(top[0], top[1], -grad), (bottom[0], bottom[1], 
 ALL = (0,0,1919,1008)
 
 # Main Screen
-BUILDER_REGION = (629, 40, 120, 120)
+BUILDER_REGION = (629, 40, 270, 120)
 BUILDER_ZERO_REGION = (720, 70, 100, 50)
 BUILDER_B_REGION = (780, 40, 120, 120)
 BUILDER_B_ZERO_REGION = (903, 70, 100, 50)
-BUILDER_B_LIST_REGION = (705, 170, 290, 550)
-BUILDER_LIST_REGION = (550, 160, 300, 600)
+BUILDER_B_LIST_REGION = (705, 160, 390, 600)
+BUILDER_LIST_REGION = (500, 160, 350, 600)
 BUILDER_LIST_TIMES = (800, 239, 160, 50)
 RESOURCES_G = (1426,80, 290, 47)
 RESOURCES_E = (1426,172, 290, 47)
@@ -130,6 +130,7 @@ RESOURCES_D = (1514,261, 200, 47)
 RESOURCES = (1420,60, 350, 250)
 LEVEL = (115,67, 80, 80)
 SELECTED_TOWER = (435, 677, 1000, 60)
+SELECTED_TOWER_BUTTONS = (340,758, 1100, 200)
 TROPHIES = (190,190, 80, 40)
 CHAT_SPOT = (400, 900, 250, 140)
 FIND_A_MATCH_SPOT = (1475, 610, 400, 170)
@@ -138,10 +139,20 @@ ATTACKING_SPOT = (0, 600, 400, 400)
 MAINTENANCE_SPOT = (600, 200, 1400, 400)
 SWITCH_ACCOUNT_SPOT = (1286, 366, 350, 100)
 FORGE_SPOT = (810, 150, 250, 100)
+FORGE_PATH_SPOT = (650,750, 350, 250)
 ATTACK_B_SPOT = (860, 800, 140, 100)
 OKAY_SPOT = (640,330, 600, 650)
+OKAY2_SPOT = (730,790, 350, 200)
 RETURN_HOME_2_SPOT = (90, 790, 200, 200)
 BLUESTACKS_MESSAGE_SPOT = (1410, 750, 250, 150)
+ATTACK_BUTTON = (80, 800, 200, 200)
+main_regions = [
+    BUILDER_REGION, BUILDER_LIST_REGION, BUILDER_LIST_TIMES, RESOURCES_G, RESOURCES_E, RESOURCES_D, RESOURCES, LEVEL,
+    SELECTED_TOWER, TROPHIES, CHAT_SPOT, ATTACK_SPOT, ATTACKING_SPOT
+                ]
+
+# LAB
+RESEARCH_TIME = (633,311, 400, 55)
 
 # NON-DESTINATIONS
 SUPERCELL_LOGIN_SPOT = (300, 870, 550, 500)
@@ -152,15 +163,18 @@ RAID_WEEKEND_NEXT_SPOT = (1300,880,300,100)
 
 # Accounts
 ACCOUNT_ICONS = (1136, 467, 110, 420)
+change_accounts_regions = [ACCOUNT_ICONS]
+
 
 # Donations
-DONATE_BUTTONS =(520, 140, 205, 760)
+DONATE_BUTTONS =(520, 100, 230, 800)
 DONATE_AREA = (795, 15, 860, 700)
 
 # Builder Screen
 BUILDER_LIST_TIMES_B = (1000, 240, 100, 30)
 WIN_ZONE = (869,808, 130, 50)
 BOAT_B_SPOT = (1083, 286, 220, 250)
+builder_regions = [BUILDER_REGION, BUILDER_LIST_TIMES_B, WIN_ZONE, BOAT_B_SPOT]
 
 # Army screen
 ARMY_TABS = (120, 50, 1500, 160)
@@ -168,13 +182,20 @@ ARMY_TIME = (1018, 165, 90, 40)
 ARMY_TIME_B = (919, 919, 154, 40)
 ARMY_TROOPS = (318, 168, 150, 45)
 CLAN_TROOPS = (631, 706, 75, 45)
-TRAIN_RANGE = (145, 535, 1520, 370)
+TRAIN_RANGE = (145, 535, 1600, 370)
 DELETE_REGION = (1650, 200, 100, 60)
-ARMY_EXISTING = (150,210, 1040, 175)
-SPELLS_EXISTING = (150,473, 950, 165)
+DELETE_2_REGION = (1520, 200, 100, 60)
+ARMY_EXISTING = (150,210, 1040, 454)
+SPELLS_EXISTING = (150,473, 950, 175)
 ARMY_CREATE = (145, 534, 1520, 370)
 END_ATTACK_SPOT = (75,675,250,150)
 ARMY_CLOCK_SPOT = (920,145,100,100)
+CASTLE_TROOPS = (147, 753, 1308, 190)
+army_regions = [ARMY_TABS, ARMY_TIME, ARMY_TROOPS, CLAN_TROOPS, ARMY_EXISTING, SPELLS_EXISTING, ARMY_CLOCK_SPOT]
+troops_regions = [ARMY_TABS, TRAIN_RANGE, DELETE_REGION, ARMY_CREATE, ]
+spells_regions = [ARMY_TABS, TRAIN_RANGE, DELETE_REGION, ARMY_CREATE, ]
+siege_regions = [ARMY_TABS, TRAIN_RANGE, DELETE_REGION, ARMY_CREATE, ]
+
 
 # Army screen - builder
 ATTACK_B_OKAY_SPOT = (823,828, 250, 100)

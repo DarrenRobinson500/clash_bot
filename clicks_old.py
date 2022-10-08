@@ -36,24 +36,6 @@ def find(image, confidence=0.55):
         result = False
     return result
 
-def wait_and_click(image, confidence=0.6):
-    # print("Wait and click:", image)
-    found = False
-    count = 0
-    while not found:
-        image_location = pag.locateCenterOnScreen(f'images/{image}.png', confidence=confidence)
-        if image_location:
-            pag.click(image_location)
-            found = True
-        else:
-            # print(f"{image} {count}")
-            time.sleep(1)
-            count += 1
-        if count == 6:
-            wait_and_click('bluestacks_icon')
-        if count > 12:
-            return
-    return
 
 def timed_click(image, offset=(0,0), dur=0, confidence=0.6):
     found = False
