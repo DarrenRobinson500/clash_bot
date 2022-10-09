@@ -62,6 +62,7 @@ def donate_give_required_troops(required_troops):
         for x in requests:
             click_rect(x)
             time.sleep(0.4)
+            print("Required troops", troop_str(required_troops))
             for x in required_troops:
                 screen = get_screenshot(DONATE_AREA)
                 val, loc, rect = find(x.donate2, screen, x.name)
@@ -158,7 +159,7 @@ def donate_basic():
     print("Donate")
     goto(chat)
     requests = find_many("donate", DONATE_BUTTONS, 0.8)
-    print(requests)
+    print("Donate request buttoms:", requests)
     for x in requests:
         click_rect(x)
         time.sleep(0.1)

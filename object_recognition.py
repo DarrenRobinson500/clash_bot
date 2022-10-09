@@ -19,7 +19,7 @@ def get_screenshot(region=None, colour=0, filename="temp"):
     except:
         return None
 
-def find(image, screen, text="", show_image=False):
+def find_(image, screen, text="", show_image=False):
     if image is None:
         print("Find - No image provided:", text)
         return 0,0,0

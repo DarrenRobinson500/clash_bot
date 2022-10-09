@@ -115,8 +115,8 @@ def test(account, village):
 # troops_count(account_2)
 # attack(account_2, account_2.army_troops)
 # sweep()
-run()
-
+# run()
+donate(account_1)
 
 # result = get_available_upgrades_levels("main")
 # for tower, cost, count in result:
