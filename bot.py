@@ -1,8 +1,10 @@
 import datetime
 
-from attacks import *
 from donate import *
 from build import *
+from account import *
+from war import *
+from research import *
 
 method = cv2.TM_CCOEFF_NORMED
 
@@ -11,10 +13,9 @@ def attack_b(account):
     start_time = datetime.now()
     goto(builder)
     # print("A0", datetime.now() - start_time)
-    screen = get_screenshot(ATTACK_BUTTON)
+    # screen = get_screenshot(ATTACK_BUTTON)
     # print("A1", datetime.now() - start_time)
-    val, loc, rect = find(i_attack_b_0, screen)
-    if val > 0.85:
+    if i_attack_b_0.find():
         print("Attack b - Not ready for attack")
         return
     print("Going to attacking b")
@@ -49,7 +50,8 @@ def attack_b(account):
         troops_left = check_all_troops_used(a, b)
         count += 1
         print(count)
-    wait_cv2("attack_b/okay")
+        if i_okay4.find(): troops_left = False
+    i_okay4.click()
     goto(builder)
     return
 
@@ -145,52 +147,42 @@ def attack_prep(account, war=False):
     else:
         data = account.army_troops
     print("Attack prep")
-    # Checking if training
     goto(army_tab)
-    result, loc, rect = find_cv2("army_clock", ARMY_CLOCK_SPOT)
-    if result > 0.6:
-        print("Army prep - still training")
-        return False
 
     # Get required troops
     sufficient_troops = True
     troops_required = []
     troops_to_build = []
+    print("data", data)
+    print("Initial troops:", data['initial_troops'])
     for x in data['initial_troops']:
+        print("Initial troops:", x)
         troops_required.append(x)
     for x, no in data['troop_group']:
+        print("Troop group:", x, no)
         for y in range(data['troop_groups'] * no):
             troops_required.append(x)
     for x in data['final_troops']:
         troops_required.append(x)
-    for x, no in data['spells']:
-        for y in range(no):
-            troops_required.append(x)
+    if account.th >= 5:
+        for x, no in data['spells']:
+            for y in range(no):
+                troops_required.append(x)
 
     required_lightening = data['lightening']
     troops_required += [lightening] * required_lightening
-    print(troop_str(troops_required))
+    print("Attack prep - required troops:", troop_str(troops_required))
     requ = Counter(troops_required)
     time.sleep(0.2)
 
     # Get actual troops
-    actual_troops = troops_count(account)
-
-    # Delete unneeded troops
-    print("Delete unneeded troops")
-    backlog_deleted = False
-    for x in troops:
-        try: actual = actual_troops[x]
-        except: actual = 0
-        required = requ[x]
-        if actual > required:
-            print("Attack prep - delete unneeded", x.name, required, actual)
-            if not backlog_deleted: troop_delete_backlog()
-            backlog_deleted = True
-            x.delete(actual - required)
+    actual_troops = army_count(account)
+    if actual_troops == "Still training": return False
+    # print("Actual troops:", actual_troops)
 
     # Create needed troops
     print("Create required troops")
+    sufficient_troops = True
     for x in requ:
         if x.type != "hero" and x.type != "siege":
             print("Troop:", x.name)
@@ -201,65 +193,40 @@ def attack_prep(account, war=False):
                 text = f"Need more of these - make {required - actual} more"
                 print(x, required, actual, text)
                 troops_to_build += [x] * (required - actual)
-    if account.has_siege: troops_to_build.append(log_thrower)
+
+    # Delete unneeded troops
+    if not sufficient_troops:
+        print("Delete unneeded troops")
+        backlog_deleted = False
+        for x in troops:
+            # print(x)
+            actual = actual_troops[x]
+            required = requ[x]
+            if actual > required and x.type != "siege":
+                print("Attack prep - delete unneeded", x.name, required, actual)
+                if not backlog_deleted: troop_delete_backlog()
+                backlog_deleted = True
+                x.delete(actual - required)
+
+    if account.has_siege:
+        for x in range(5):
+            troops_to_build.append(log_thrower)
     print("Attack prep:", troop_str(troops_to_build))
     if war: extra = False
     else: extra = True
-    restock(troops_to_build, extra=extra)
-    if not account.has_siege and actual_troops[log_thrower] != 1:
+    restock(troops_to_build, account, extra=extra)
+
+    if not account.has_siege and actual_troops[log_thrower] != 1 and account.th > 7:
         sufficient_troops = False
         request(account)
         db_update(account_1, "donate", datetime.now())
 
+    print("Attack prep - sufficient troops", sufficient_troops)
     return sufficient_troops
 
 def troop_create(troop, count):
     print("Troop create: ", troop)
     troop.start_train(count)
-
-# def troop_count(troop):
-#     # goto(army_tab)
-#     time.sleep(.2)
-#     if troop.type == "troop":
-#         region = ARMY_EXISTING
-#     else:
-#         region = SPELLS_EXISTING
-#
-#     val, loc, rect = find(troop.army, get_screenshot(region))
-#
-#     print("Troop count - identifying troop", troop.name, val)
-#     if val < 0.60: return 0
-#     region = (loc[0] - 30, loc[1] - 70, 130, 80)
-#     result = read_troop_count(region)
-#     try:
-#         result = int(result)
-#         if result > 150: result = int(result / 10)
-#         return result
-#     except:
-#         return 0
-
-# def troop_count_old(troop):
-#     # goto(army_tab)
-#     time.sleep(.2)
-#     if troop in TROOPS:
-#         region = ARMY_EXISTING
-#     else:
-#         region = SPELLS_EXISTING
-#     troop = "troops/" + troop
-#
-#     val, loc, rect = find_cv2(troop, region)
-#
-#     print("Troop count - identifying troop", troop, val)
-#     if val < 0.60: return 0
-#     region = (loc[0] - 30, loc[1] - 70, 130, 80)
-#     result = read_troop_count(region)
-#     try:
-#         result = int(result)
-#         if result > 150: result = int(result / 10)
-#         return result
-#     except:
-#         return 0
-#
 
 def check_towers(towers, img, return_image=False):
     found = False
@@ -299,12 +266,12 @@ def assess_village(account, data, war_goals):
 
     # pag.screenshot("attacks/attack.png")
     th, loc = town_hall(img)
-    if th > data['max_th']:
+    if th > data['max_th'] and account.th > 5:
         return "Town hall too high"
 
     # Aggressive defences
     if not wait_cv2("coin"): return "Not on attack screen"
-    if check_towers(data['towers_to_avoid'], img): return  "Aggressive defence"
+    if check_towers(data['towers_to_avoid'], img): return "Aggressive defence"
 
     # Barb drop spot
     if data['name'] == "barbs":
@@ -407,6 +374,8 @@ def launch_attack(account, data, image):
     if data['bomb_target2'] is not None: bomb(data['bomb_target2'])
     troop_pause = data['troop_pause']
 
+    if account.th < 9:
+        place_clan()
     print("Launch attack: initial troops")
     for x in data['initial_troops']:
         place(x, 1, dp)
@@ -438,10 +407,10 @@ def launch_attack(account, data, image):
 
 def place(troop, count_total, dp=[400,400], troop_pause=0):
     dp1 = (dp[0],min(dp[1],815))
-    val, loc, rect = find(troop.attack, get_screenshot(TROOP_ZONE))
+    val, loc, rect = find(troop.i_attack.image, get_screenshot(TROOP_ZONE))
     print("Place troops:", troop, val, loc)
     if val > 0.63:
-        click(troop.attack, TROOP_ZONE)
+        click(troop.i_attack.image, TROOP_ZONE)
         time.sleep(.2)
         count = 0
         pause_dur = 0.2
@@ -461,32 +430,9 @@ def place(troop, count_total, dp=[400,400], troop_pause=0):
                 count += reduction * 2
             count += 1
 
-def place_old(troop, count_total, dp=[400,400], troop_pause=0):
-    if troop in TROOP_ATTACK_EXT: troop = troop + "_attack"
-    troop = f"troops/{troop}"
-    dp1 = (dp[0],min(dp[1],815))
-    val, loc, rect = find_cv2(troop, TROOP_ZONE)
-    print("Place troops:", troop, val, loc)
-    if val > 0.63:
-        click_cv2(troop, TROOP_ZONE)
-        time.sleep(.2)
-        count = 0
-        pause_dur = 0.2
-        while count < count_total:
-            pag.click(dp1)
-            time.sleep(troop_pause)
-            time.sleep(pause_dur)
-            prop_troops = int(count / count_total * 100)
-            damage = read_text(DAMAGE, WHITE, True)
-            if damage > 100: damage = 0
-            # print("Place:", prop_troops, damage)
-            if damage + 30 > prop_troops and damage > 30:
-                pause_dur += 0.1
-                pause_dur = min (1.5, pause_dur)
-            if damage + 20 > prop_troops and damage > 50:
-                reduction = int((1 - prop_troops/damage) * count_total)
-                count += reduction * 2
-            count += 1
+def place_clan():
+    i_clan_army.click()
+    pag.click(STANDARD_DP)
 
 def place_line(troop, count_total, dp1, dp2, troop_pause=0):
     if troop in TROOP_ATTACK_EXT: troop = troop + "_attack"
@@ -517,14 +463,13 @@ def has_spells():
     return False, None
 
 def bomb_mult(coords, count):
-
     for x in range(count):
         pag.click(pag.center(coords))
 
 def bomb(targets):
     spells, loc = has_spells()
-    click_cv2("troops/lightening", TROOP_ZONE, 0.50)
-    print("Bomb (initial):", spells)
+    lightening.i_army.click()
+    print("Bomb (initiwsal):", spells)
     count = 0
     for x in targets:
         if count < 4:
@@ -538,8 +483,8 @@ def bomb(targets):
                 bomb_mult(rect, hits)
                 time.sleep(1.5)
                 for _ in range(2):
-                    time.sleep(0.5)
-                    val, loc, rect  = find_cv2(x, enlarged_rect)
+                    time.sleep(2)
+                    val, loc, rect = find_cv2(x, enlarged_rect)
                     if val > 0.7:
                         print("Bomb - One more")
                         bomb_mult(rect, 1)
@@ -557,15 +502,15 @@ def finish_attack(account, data):
     goto(main)
     account.update_resources(current_resources())
 
-def log(var, account, no):
-    time = datetime.now().strftime('%d %b %I:%M%p')
-    no = f"{no:,}"
-    line = f"{time}: Account: {account.number}. {var.title()}: {no}"
-    with open(f"log{account.number}.txt", 'r+') as f:
-        content = f.read()
-        f.seek(0, 0)
-        f.write(line.rstrip('\r\n') + '\n' + content)
-
+# def log(var, account, no):
+#     time = datetime.now().strftime('%d %b %I:%M%p')
+#     no = f"{no:,}"
+#     line = f"{time}: Account: {account.number}. {var.title()}: {no}"
+#     with open(f"log{account.number}.txt", 'r+') as f:
+#         content = f.read()
+#         f.seek(0, 0)
+#         f.write(line.rstrip('\r\n') + '\n' + content)
+#
 def max2(list):
     try:
         return max(list)
@@ -595,239 +540,6 @@ def calc_score(img):
     print("Calc score:", result)
     return result
 
-# =============
-# === Build ===
-# =============
-
-
-def build(account, village):
-    builders = spare_builders(village)
-    print("Build - spare builders", builders)
-    if spare_builders(village) == 0: return
-    if village == "main": goto(main)
-    else: goto(builder)
-    remove_trees(village)
-    available_options = get_available_upgrades(village)
-    preference = get_preference(available_options)
-    if preference:
-        select_tower(village, preference)
-        upgrade()
-        attack(account, account.army_troops)
-
-# def build_old(account, village):
-#     if village == "main": goto(main)
-#     else: goto(builder)
-#     for currency in CURRENCIES:
-#         account_no, village, currency, preference, cost, comment = db(f"SELECT * FROM next WHERE account='{account.number}' and village='{village}' and currency = '{currency}'")[0]
-#         print("Build - preference:", preference)
-#         if preference == "none": next_build(account, village)
-#
-#     builders = spare_builders(village)
-#     if builders == 0: return
-#     remove_trees(village)
-#     if builders == 1 and village == "main" and account.needs_walls:
-#         result = get_time_build(account, "main")
-#         if result is None: return
-#         time_remaining = result - datetime.now()
-#         print("Build - time remaining until 2 builders:", time_remaining)
-#         start_saving = time_remaining < timedelta(hours=24)
-#         print("Build - start saving", start_saving)
-#         if not start_saving:
-#             print("Building walls")
-#             build_sub("main", "wall")
-#             return
-#
-#     for currency in CURRENCIES:
-#         if spare_builders(village) == 0: return
-#         result = db(f"SELECT * FROM next WHERE account='{account.number}' and village='{village}' and currency = '{currency}'")[0]
-#         account_no, village, currency, building, cost, comment = result
-#         preference = building
-#         print("Build - preference:", preference)
-#         if preference != "none" and preference != "complete":
-#             result = build_sub(village, preference)
-#             print("Build", result)
-#             if result:
-#             # if preference != "wall" and result:
-#                 print("Build - updating db_next")
-#                 db_update_next(account.number, village, currency, "none", 0)
-#                 next_build(account, village)
-#                 update_time_build(account, village)
-#                 account.attacking = True
-#
-# def next_build(account, village):
-#     condition = f" WHERE account='{account.number}' and village='{village}'"
-#     result = db(f"SELECT * FROM next" + condition)
-#     need_update = False
-#     for current_account_no, current_village, current_currency, current_building, current_cost, comment in result:
-#         if current_building == "none": need_update = True
-#
-#     if need_update:
-#         preferences = get_build_preference(village)
-#         # cost = build_cost(village, building)[1]
-#         db_update_next(account.number, village, "elixir1", preferences[0])
-#         db_update_next(account.number, village, "dark", preferences[1])
-#         db_update_next(account.number, village, "gold", preferences[2])
-#         db_update_next(account.number, village, "elixir", preferences[3])
-#         # account, village, currency, building, cost, comment
-
-# def db_update_next(account, village, currency, building, cost=0, comment=""):
-#     # account, village, currency, building, cost, comment
-#
-#     condition = f" WHERE account='{account.number}' and village='{village}' and currency='{currency}'"
-#     db_str = f"SELECT * FROM next" + condition
-#     existing = len(db(db_str))
-#     if existing == 1:
-#         db(f"UPDATE next SET building='{building}'" + condition)
-#         db(f"UPDATE next SET cost='{cost}'" + condition)
-#         db(f"UPDATE next SET comment='{comment}'" + condition)
-#     else:
-#         print("Records not updated - didn't find exactly 1 record to update")
-#
-# def db_update_comment(account, village, currency, comment):
-#     # account, village, currency, building, cost, comment
-#
-#     condition = f" WHERE account='{account.number}' and village='{village}' and currency='{currency}'"
-#     db_str = f"SELECT * FROM next" + condition
-#     existing = len(db(db_str))
-#     if existing == 1:
-#         db(f"UPDATE next SET comment='{comment}'" + condition)
-#     else:
-#         print("Records not updated - didn't find exactly 1 record to update")
-
-
-def move_list(direction):
-    dur = 0.5
-    if direction == "up":
-        pag.moveTo(855,666, dur)
-        pag.dragTo(855,210, dur)
-    if direction == "down":
-        pag.moveTo(855,210, dur)
-        pag.dragTo(855,666, dur)
-
-
-
-# def build_available(village, build_type):
-#     try:
-#         resource_type, cost = build_cost(village, build_type)
-#     except:
-#         return False
-#     if village == "main":
-#         resources = current_resources()
-#     elif village == "builder":
-#         goto(builder)
-#         resources = current_resources_b()
-#     else:
-#         return
-#
-#     resource = 0
-#     if resource_type == "Gold": resource = resources[0]
-#     if resource_type == "Elixir": resource = resources[1]
-#     if resource_type == "Dark" and village == "main": resource = resources[2]
-#     print("Build available: cost, resource", cost, resource)
-#     return cost < resource
-#
-# def get_build_preference(village):
-#     options = get_available_upgrades(village)
-#     preferences = ["complete","complete","complete","complete"]
-#     if village == "main":
-#         loops = [(0, build_preferences_e1), (1, build_preferences_d), (2, build_preferences_g), (3, build_preferences_e)]
-#     else:
-#         loops = [(0, build_b_preferences_e1), (2, build_b_preferences_g), (3, build_b_preferences_e)]
-#
-#     print(loops)
-#     for loop_index, loop_list in loops:
-#         for x in loop_list:
-#             if x in options:
-#                 preferences[loop_index] = x
-#                 break
-#
-#     print(f"Get build preferences: Options {options}, Preferences {preferences}")
-#     return preferences
-
-# def build_sub(village, item):
-#     if village == "main":
-#         region = BUILDER_LIST_REGION
-#         directory = "builder/"
-#         max_count = 4
-#     elif village == "builder":
-#         region = BUILDER_B_LIST_REGION
-#         directory = "builder_b/"
-#         max_count = 3
-#     else:
-#         print("Build sub - incorrect village specification")
-#         return
-#
-#     goto_list_top(village)
-#     count = 0
-#     while count < max_count:
-#         val, loc, rect = find_cv2(directory + item, region)
-#         val_upgrade, loc_upgrade, rect_upgrade = find_cv2("suggested_upgrades", region)
-#         print("Build sub:", item, val)
-#         # print(val, val_upgrade, rect[0], rect_upgrade[0])
-#         # print(val > 0.75 and not(val_upgrade > 0.75 and rect[1] < rect_upgrade[1]))
-#         if val > 0.82 and not(val_upgrade > 0.8 and rect[1] < rect_upgrade[1]):
-#             print("trying to click and then upgrade")
-#             click_cv2(directory + item, region)
-#             result = upgrade()
-#             if result and item == "wall":
-#                 build_sub(village, item)
-#             return result
-#         else:
-#             move_list("up")
-#             time.sleep(1)
-#         count += 1
-
-# def build_cost(village, item):
-#     if item is None: return "", 0
-#     if village == "main":
-#         region = BUILDER_LIST_REGION
-#         directory = "builder/"
-#         max_count = 5
-#     elif village == "builder":
-#         region = BUILDER_B_LIST_REGION
-#         directory = "builder_b/"
-#         max_count = 3
-#     else:
-#         print("Build sub - incorrect village specification")
-#         return "", 0
-#
-#     goto_list_top(village)
-#     count = 0
-#     while count < max_count:
-#         val, loc, rect = find_cv2(directory + item, region)
-#         val_upgrade, loc_upgrade, rect_upgrade = find_cv2("suggested_upgrades", region)
-#         print("Build cost:", item, val)
-#         # print(val > 0.75 and not(val_upgrade > 0.75 and rect[1] < rect_upgrade[1]))
-#         if val > 0.80 and not(val_upgrade > 0.75 and rect[1] < rect_upgrade[1]):
-#             print("Found item")
-#             region = (loc[0] + 200, loc[1] - 30, 390, 55)
-#             print("Build cost - taking screenshot", region)
-#             pag.screenshot('temp/temp_build_cost.png', region=region)
-#             screen = cv2.imread('temp/temp_build_cost.png', 0)
-#             cost = read_cost(screen)
-#             if len(cost) == 0:
-#                 return ("Read Failure", 0)
-#             # if item == "wall": show(screen)
-#             type = "Dark"
-#             if cost[0] == 'g' or cost[0] == 'h': type = "Gold"
-#             elif cost[0] == 'e' or cost[0] == 'f': type = "Elixir"
-#             try:
-#                 if cost[0].isnumeric():
-#                     cost = int(cost)
-#                 elif cost[1].isnumeric():
-#                     cost = int(cost[1:])
-#                 else:
-#                     cost = int(cost[2:])
-#             except:
-#                 cost = 0
-#             return (type, cost)
-#         else:
-#             move_list("up")
-#             time.sleep(1)
-#         count += 1
-#     return "", 0
-
-
 # ============
 # === COIN ===
 # ============
@@ -841,9 +553,7 @@ def capital_coin():
     print("Coin available:", val)
     if val > 0.7:
         goto(forge)
-        if find_cv2("collect_capital_coin")[0] > 0.7:
-            click_cv2("collect_capital_coin")
-            return True
+        return i_collect_capital_coin.click()
     return False
 
 # =============
@@ -853,7 +563,8 @@ def capital_coin():
 def clock():
     goto(builder)
     val, loc, rect = find_cv2('clock')
-    if val > 0.6:
+    print(val)
+    if val > 0.65:
         print("Clock found")
         click_cv2('clock')
         click_cv2('free_boost')
@@ -866,10 +577,8 @@ def clock():
 # ====================
 
 def get_resources():
-    for x in RESOURCE_TEMPLATES:
-        val, loc, rect = find_cv2(x)
-        if val > 0.8:
-            click_cv2(x)
+    for x in resource_templates:
+        x.click()
 
 # ========================
 # === 7. LOSE TROPHIES ===
@@ -878,13 +587,7 @@ def get_resources():
 def calc_trophies():
     goto(main)
     time.sleep(1)
-    result = read_num(TROPHIES, WHITE, 1.00)
-    try:
-        result = int(result)
-    except:
-        result = 0
-    if result < 20: result = result * 100
-    if result < 500: result = result * 10
+    result = trophies.read(TROPHIES,return_number=True, show_image=False)
     return result
 
 def lose_trophies(account):
@@ -897,7 +600,7 @@ def lose_trophies(account):
         # zoom_out()
         dp = STANDARD_DP
         for troop in [king, queen, warden, champ, barb, giant, bomber, ]:
-            val, loc, rect = find(troop.attack, get_screenshot(TROOP_ZONE))
+            val, loc, rect = find(troop.i_attack.image, get_screenshot(TROOP_ZONE))
             print("Lose trophies:", troop.name, val)
             if val > 0.65:
                 place(troop, 1, dp)
@@ -908,10 +611,10 @@ def lose_trophies(account):
         current_location = "return_home"
         goto(main)
 
-        if troop in [barb, giant, bomb, ]:
-            troop_delete_backlog()
-            restock([troop], extra=False)
-            attack(account, account.army_troops)
+        # if troop in [barb, giant, bomb, ]:
+        #     troop_delete_backlog()
+        #     restock([troop], account, extra=False)
+        #     attack(account, account.army_troops)
 
         return True
     return False
@@ -927,22 +630,41 @@ def check_trophies(account):
     if account.number == 2 and current_trophies < 1000:
         account_2.troops = BARBS_11
 
-def sweep():
+def sweep(fast=False):
+    start_time = datetime.now()
     for account in accounts:
-        change_accounts(account.number)
+        if fast:
+            change_accounts_fast(account)
+        else:
+            change_accounts(account.number)
+        if account.number == 1:
+            war_get_status_image()
+            i_return_home_3.click()
         get_resources()
-        account.update_resources(current_resources())
-        if account.building:
+        get_trader_info(account)
+        if account.th > 5:
+            if not fast: donate(account)
+        if not fast:
+            account.update_resources(current_resources())
+            check_completion(account)
+        if account.building and not fast:
             build(account, "main")
         # check_trophies(account)
-        donate(account)
-        capital_coin()
         account.next_update()
         clock()
         get_resources()
-        if account.building_b:
+        if account.building_b and not fast:
             build(account, "builder")
-        attack_b(account)
+        if account.th > 5 and not fast:
+            attack_b(account)
+            goto(builder)
+            time.sleep(0.1)
+        get_screenshot(REMAINING_ATTACKS, filename=f"tracker/remaining_attacks{account.number}")
+        goto(main)
+        if account.th > 5:
+            capital_coin()
+        print("Timer:", account, datetime.now() - start_time)
+    create_combined_builders_image(accounts)
 
 # === DATABASE ===
 def db(db_str):
@@ -979,9 +701,11 @@ def db_next_job_old():
 # ============
 
 def run_job(job, sweep_period):
+    print()
     print("Job:", job)
     account, job, job_time = job
-    account = accounts[account]
+    account = accounts[account - 1]
+    print(account)
     job_time = string_to_time(job_time)
     if time_to_string(job_time) == "Now":
         if job == "sweep":
@@ -996,53 +720,67 @@ def run_job(job, sweep_period):
                 db_update(account, job, datetime.now() + timedelta(hours=2))
         elif job == "donate":
             change_accounts(account.number)
-            donate(account)
-            if account.attacking:
+            if account.attacking or not account.donating():
                 db_update(account, job, datetime.now() + timedelta(days=1))
-            else:
-                db_update(account, job, datetime.now() + timedelta(minutes=5))
+                return
+            donate(account)
+            db_update(account, job, datetime.now() + timedelta(minutes=5))
+        elif job == "research":
+            change_accounts(account.number)
+            goto(main)
+            next_research(account)
+            account.update_lab_time()
         elif job == "build":
             if account.building:
                 change_accounts(account.number, "main")
+                goto(main)
                 build(account, "main")
-                db_update(account, job, datetime.now() + timedelta(minutes=20))
-            else:
-                db_update(account, job, datetime.now() + timedelta(hours=2))
-        elif job == "build_b":
-            change_accounts(account.number, "builder")
-            build(account, "builder")
-            db_update(account, job, datetime.now() + timedelta(minutes=20))
-        elif job == "attack_b":
-            change_accounts(account.number, "builder")
-            job_time = get_time_attack_b()
-            default = datetime.now() + timedelta(hours=1)
-            if not job_time:
-                job_time = default
-            else:
-                job_time = max(default, job_time)
-            db_update(account, job, job_time)
-            print(f"Updated time for next builder attack for account {account.number}")
+                goto_list_very_top("main")
+                time.sleep(0.2)
+                result = build_time.read(BUILDER_LIST_TIMES)
+                result = text_to_time_2(result)
+                account.next_build = result
+                db_update(account, "build", result)
+
+        # elif job == "build_b":
+        #     change_accounts(account.number, "builder")
+        #     build(account, "builder")
+        #     db_update(account, job, datetime.now() + timedelta(minutes=20))
+        # elif job == "attack_b":
+        #     change_accounts(account.number, "builder")
+        #     # job_time = get_time_attack_b()
+        #     # default = datetime.now() + timedelta(hours=1)
+        #     if not job_time:
+        #         job_time = default
+        #     else:
+        #         job_time = max(default, job_time)
+        #     db_update(account, job, job_time)
+        #     print(f"Updated time for next builder attack for account {account.number}")
         elif job == "coin":
             change_accounts(account.number, "main")
+            pag.click(BOTTOM_LEFT)
             if capital_coin():
-                db_update(account, job, datetime.now() + timedelta(hours=23, minutes=30))
+                db_update(account, job, datetime.now() + timedelta(hours=23, minutes=2))
             else:
-                db_update(account, job, datetime.now() + timedelta(minutes=30))
-        elif job == "clock":
-            change_accounts(account.number, "builder")
-            if clock():
-                job_time = datetime.now() + timedelta(hours=23)
-                print(f"Clicked the clock")
-            else:
-                print("Clock not found")
-                job_time = datetime.now() + timedelta(hours=3)
-            db_update(account, job, job_time)
-            print(f"Updated time for next clock click for account {account.number}")
+                result = get_time_coin()
+                db_update(account, job, result)
+        # elif job == "clock":
+        #     change_accounts(account.number, "builder")
+        #     if clock():
+        #         job_time = datetime.now() + timedelta(hours=23)
+        #         print(f"Clicked the clock")
+        #     else:
+        #         print("Clock not found")
+        #         job_time = datetime.now() + timedelta(hours=3)
+        #     db_update(account, job, job_time)
+        #     print(f"Updated time for next clock click for account {account.number}")
         elif job == "lose_trophies":
             change_accounts(account.number, "main")
-            if lose_trophies(account):  minutes = 2
+            if lose_trophies(account):  minutes = 5
             else:                       minutes = 120
+            print(minutes)
             job_time = datetime.now() + timedelta(minutes=minutes)
+            print("Run - lose trophies", datetime.now(), timedelta(minutes=minutes), job_time)
             db_update(account, job, job_time)
         else:
             job_time = datetime.now() + timedelta(hours=24)
@@ -1052,7 +790,7 @@ def run_job(job, sweep_period):
         rest_time = job_time - datetime.now()
         print_info()
         print("Rest time:", rest_time)
-        click_cv2("pycharm")
+        goto(pycharm)
         time.sleep(rest_time.seconds)
         reset()
         time.sleep(0.2)
@@ -1081,8 +819,15 @@ def print_info():
     # print_locs()
     print_total_donations()
     print()
+    next_build = None
     for account in accounts:
         account.print_info()
+        for x in [account.next_build, account.next_build_b, account.next_research]:
+            if x and x > datetime.now():
+                if next_build is None: next_build = x
+                else: next_build = min(x, next_build)
+            # print("Next build:", account, x, next_build)
+    # print("Next build:", string_to_time(next_build))
     print()
     db_view()
     print()
@@ -1123,23 +868,23 @@ def get_times(accounts):
         db_update(account, "build", get_time_build(account, "main"))
         db_update(account, "attack", get_time_attack())
         db_update(account, "build_b", get_time_build(account, "village"))
-        db_update(account, "attack_b", get_time_attack_b())
+        # db_update(account, "attack_b", get_time_attack_b())
         db_update(account, "coin", get_time_coin())
 
-def get_time_attack_b():
-    print("Get time attack - builder")
-    goto(builder)
-    click_cv2("attack_b")
-    if find_cv2("builder_attack_wins")[0] > 0.7:
-        print("Ready for attack")
-        result = datetime.now()
-        pag.click(BOTTOM_LEFT)
-        return result
-    result = read_text(ARMY_TIME_B, WHITE)
-    result = alpha_to_numbers(result)
-    result = text_to_time(result)
-    pag.click(BOTTOM_LEFT)
-    return result
+# def get_time_attack_b():
+#     print("Get time attack - builder")
+#     goto(builder)
+#     click_cv2("attack_b")
+#     if find_cv2("builder_attack_wins")[0] > 0.7:
+#         print("Ready for attack")
+#         result = datetime.now()
+#         pag.click(BOTTOM_LEFT)
+#         return result
+#     result = read_text(ARMY_TIME_B, WHITE)
+#     result = alpha_to_numbers(result)
+#     result = text_to_time(result)
+#     pag.click(BOTTOM_LEFT)
+#     return result
 
 def update_time_build(account, village):
     db_str = f"SELECT * FROM next WHERE account = '{account.number}' and village = '{village}' and currency = 'elixir1'"
@@ -1203,30 +948,22 @@ def get_time_coin():
     print("Get time to next coin")
     goto(forge)
     time.sleep(0.2)
-    result = read_text(CAPITAL_COIN_TIME, WHITE)
-    print("Raw:", result)
-    try:
-        result = alpha_to_numbers(result)
-        result = text_to_time(result)
-        print("after text_to_time:", result)
-    except:
-        print("Failed to read screenshot")
-        print(result)
-        time.sleep(0.2)
+    result = coin_time.read(CAPITAL_COIN_TIME, show_image=False)
+    result = text_to_time_2(result)
     print("Coin time:", result)
     return result
 
 
-def current_resources():
-    time.sleep(.1)
-    result = []
-
-    for region in [RESOURCES_G, RESOURCES_E, RESOURCES_D]:
-        result_ind = resource_numbers.read(region)
-        try:
-            result.append(int(result_ind))
-        except:
-            result.append(0)
+# def current_resources():
+#     time.sleep(.1)
+#     result = []
+#
+#     for region in [RESOURCES_G, RESOURCES_E, RESOURCES_D]:
+#         result_ind = resource_numbers.read(region)
+#         try:
+#             result.append(int(result_ind))
+#         except:
+#             result.append(0)
 
     # for name, region in [(gold, RESOURCES_G), (elixir, RESOURCES_E), (dark, RESOURCES_D)]:
     #     pag.screenshot(f'temp/current_{name}.png', region=region)
@@ -1237,9 +974,9 @@ def current_resources():
     #     except:
     #         result_ind = 0
 
-    print("Available Resources:", result)
-
-    return result
+    # print("Available Resources:", result)
+    #
+    # return result
 
 
 def current_resources_old():
@@ -1261,3 +998,4 @@ def current_resources_old():
 
     return result
 
+# clock()

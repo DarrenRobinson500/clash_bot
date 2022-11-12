@@ -1,4 +1,5 @@
-from account import *
+# from account import *
+from attacks import *
 from sql import *
 
 def get_requestor_name(y):
@@ -24,10 +25,11 @@ def donate_get_required_troops(account):
         screen = get_screenshot(region)
         for x in troops:
             if x.type == "siege" and not account.has_siege: continue
+            if x.i_donate1 is None or x.i_donate1.image is None: continue
             if x.currently_training: continue
             show_image = False
             if x == edrag: show_image = False
-            val, loc, rect = find(x.donate1, screen, text=x.name, show_image=show_image)
+            val, loc, rect = find(x.i_donate1.image, screen, text=x.name, show_image=show_image)
             if val > 0.65:
                 required_troops.append(x)
                 if x.donation_count == 0: x.donation_count = 1
@@ -42,8 +44,7 @@ def donate_train_required_troops(account, required_troops):
         print("Donate - train required troops:", troop.name.capitalize())
         if troop.type == "siege":
             if not account.has_siege: continue
-        val, loc, rect = find(troop.training, get_screenshot(BACKLOG))
-        if val > 0.7:
+        if troop.i_training.find(fast=True):
             print("Already training:", troop.name)
             troop.currently_training = True
         else:
@@ -64,30 +65,27 @@ def donate_give_required_troops(required_troops):
             time.sleep(0.4)
             print("Required troops", troop_str(required_troops))
             for x in required_troops:
-                screen = get_screenshot(DONATE_AREA)
-                val, loc, rect = find(x.donate2, screen, x.name)
-                print(x.name, round(val, 2))
-                if val > 0.65 and check_troop_colour_donate(x):
-                    click(x.donate2, DONATE_AREA)
+                if x.i_donate2.find() and x.i_donate2.check_colour():
+                    x.i_donate2.image.click()
                     pag.move(755,322)
                     time.sleep(0.1)
                     x.donations += 1
                     x.currently_training = False
                     required_troops.remove(x)
-            click(donate_cross)
+            i_donate_cross.click()
             time.sleep(10)
 
 def check_troop_colour_donate(troop):
-    val, loc, rect = find(troop.donate2, get_screenshot(DONATE_AREA), troop.name)
+    val, loc, rect = troop.i_donate2.find_detail(fast=True)
     rect_adj = [rect[0] + DONATE_AREA[0], rect[1] + DONATE_AREA[1], rect[2], rect[3], ]
     colour = check_colour_rect(rect_adj, show_image=False, text=troop.name)
     return colour
 
 def donate_go_up():
     goto(chat)
-    val, loc, rect = find(more_donates, get_screenshot(DONATE_BUTTONS), show_image=False)
+    val, loc, rect = i_more_donates.find_detail()
     print(val)
-    if val > 0.65:
+    if val > i_more_donates.threshold:
         rect_adj = [rect[0] + DONATE_BUTTONS[0], rect[1] + DONATE_BUTTONS[1], rect[2], rect[3], ]
         click_rect(rect_adj)
         time.sleep(0.5)
@@ -107,36 +105,31 @@ def print_training():
 def donate(account):
     donate_go_up()
     donate_basic()
+    if not account.donating():
+        db_update(account, "donate", datetime.now() + timedelta(days=1))
+        return
     print("Donate get required troops")
     required_troops = donate_get_required_troops(account)
-    if len(required_troops) > 0:
-        print("Donate - required troops:", troop_str(required_troops))
-        time_required = donate_train_required_troops(account, required_troops)
+    queue_up_donations(account, extra_troops=required_troops)
+    db_update(account, "donate", datetime.now() + timedelta(minutes=20))
 
-        next_donation = datetime.now() + timedelta(seconds=time_required + 1)
-        next_attack = next_donation + timedelta(seconds=20)
-        db_update(account, "donate", next_donation)
-        db_update(account, "attack", next_attack)
-
-    if account.donating():
-        queue_up_donations(account)
-        db_update(account, "donate", datetime.now() + timedelta(minutes=3))
-
-    print_total_donations()
-    print_training()
-
-def queue_up_donations(account):
+def queue_up_donations(account, extra_troops=None):
     troops_to_queue = []
+    for troop in extra_troops:
+        troops_to_queue.append(troop)
     for troop in troops:
-        if account == account_3 and troop == edrag: continue
+        if troop.name in ["super_minion", ""]: continue
         if troop.donations > 0:
             for x in range(troop.donation_count):
                 troops_to_queue.append(troop)
+    if account.has_siege:
+        siege_queue = [x for x in troops_to_queue if x.type == 'siege']
+        if len(siege_queue) < 6:
+            for _ in range(6 - len(siege_queue)):
+                troops_to_queue.append(log_thrower)
+
     print("Queue up donations:", troop_str(troops_to_queue))
-    troops_to_queue.append(ram)
-    result = army_prep(account, troops_to_queue)
-    if not result:
-        db_update(account, "donate", get_time_attack())
+    army_prep(account, troops_to_queue, army_or_total="total")
 
 def get_time_attack():
     # print("Get time until attack is ready")
@@ -160,53 +153,72 @@ def donate_basic():
     goto(chat)
     requests = find_many("donate", DONATE_BUTTONS, 0.8)
     print("Donate request buttoms:", requests)
+    start_time = datetime.now()
     for x in requests:
         click_rect(x)
         time.sleep(0.1)
         for x in troops:
             if x.donate_bool:
-                screen = get_screenshot(DONATE_AREA)
+                screen = get_screenshot(DONATE_AREA, colour=0)
                 show_image = False
-                if x == dragon: show_image = False
-                val, loc, rect = find(x.donate2, screen, x.name, show_image=show_image)
-                print("Donate:", x.name, round(val,2))
+                if x == super_barb: show_image = False
+                print(x)
+                val, loc, rect = find(x.i_donate2.image, screen, x.name, show_image=show_image)
+                print("Donate:", x.name, round(val,2), datetime.now() - start_time)
                 if val > 0.65:
                     count = 0
-                    colour = check_troop_colour_donate(x)
+                    screen = get_screenshot(DONATE_AREA, colour=1)
+                    image_colour = screen[rect[1]:rect[1]+rect[3], rect[0]:rect[0]+rect[2]]
+                    colour = check_colour_screen(image_colour)
                     print(x.name, val, colour)
                     while colour and count < 10:
                         print("Donate - clicking:", x.name)
-                        click(x.donate2, DONATE_AREA)
+                        click(x.i_donate2.image, DONATE_AREA)
                         x.donations += 1
                         time.sleep(0.1)
                         count += 1
                         if x.type == "siege": count += 10
-                        colour = check_troop_colour_donate(x)
-        click(donate_cross)
+                        image_colour = get_screenshot(DONATE_AREA, colour=1)[rect[1]:rect[1] + rect[3], rect[0]:rect[0] + rect[2]]
+                        colour = check_colour_screen(image_colour)
+        i_donate_cross.click()
+        print("Donate:", datetime.now() - start_time)
         time.sleep(0.2)
 
-def army_prep(account, troops_required):
+def check_colour_screen(image):
+    spots = [(1 / 4, 1 / 4), (1 / 4, 3 / 4), (3 / 4, 1 / 4), (3 / 4, 3 / 4), (7 / 8, 1 / 8), (0.95, 0.05)]
+    count = 0
+    y, x, channels = image.shape
+    for s_x, s_y in spots:
+        pixel = image[int(y * s_y)][int(x * s_x)]
+        blue, green, red = int(pixel[0]), int(pixel[1]), int(pixel[2])
+        if abs(blue - green) > 5 or abs(blue - red) > 5: count += 1
+        # print("Check colour screen", blue, green, red, count)
+    colour = False
+    if count > 1: colour = True
+    print("Check colour", colour)
+    return colour
+
+
+def army_prep(account, required_army, army_or_total="army", troops_only=False):
     print("Army prep")
-    # Checking if training
-    goto(army_tab)
-    result, loc, rect = find_cv2("army_clock", ARMY_CLOCK_SPOT)
-    if result > 0.6:
-        print("Army prep - still training")
-        return False
 
     troops_to_build = []
 
     # Get required troops
-    required_counter = Counter(troops_required)
-    time.sleep(0.2)
+    required_counter = Counter(required_army)
 
     # Get actual troops
-    actual_troops = troops_count(account)
+    actual_army_counter, actual_total_counter = full_count(account)
+    if actual_army_counter == "Still training": return False
+    if army_or_total == "army": actual_troops = actual_army_counter
+    else: actual_troops = actual_total_counter
 
     # Delete unneeded troops
     print("Delete unneeded troops")
     backlog_deleted = False
     for x in troops:
+        if troops_only and x.type == "spell": continue
+        if troops_only and x.type == "siege": continue
         try: actual = actual_troops[x]
         except: actual = 0
         required = required_counter[x]
@@ -217,57 +229,99 @@ def army_prep(account, troops_required):
             x.delete(actual - required)
 
     # Create needed troops
-    print("Create required troops:", required_counter)
+    print("Required troops:")
+    print_count(required_counter)
     for x in required_counter:
-        print(x)
-        if x and x.type != "hero" and x.type != "siege":
-            print("Troop:", x.name)
-            actual = actual_troops[x]
+        if x and x.type != "hero":
+            try: actual = actual_troops[x]
+            except: actual = 0
             required = required_counter[x]
-            if actual < required:
-                text = f"Need more of these - make {required - actual} more"
-                print("Army prep", x, required, actual, text)
-                troops_to_build += [x] * (required - actual)
-    print("Army prep:", troop_str(troops_to_build))
-    restock(troops_to_build, extra=False)
-
+            text = ""
+            if actual < required: text = f"Need more of these - make {required - actual} more"
+            # print("Army prep:", x, required, actual, text)
+            troops_to_build += [x] * (required - actual)
+    print("Army prep - troops to build:", troop_str(troops_to_build))
+    restock(troops_to_build, account, extra=False)
     return
 
-def troops_count(account, confidence=0.8):
-    goto(army_tab)
-    screen = get_screenshot(ARMY_EXISTING)
-    troop_count_dict = {}
+def add_to_dict(dict, key, amount):
+    if key in dict:
+        dict[key] += amount
+    else:
+        dict[key] = amount
+    return dict
+
+def troops_count_flex(tab, region, troops, count_dict={}):
+    goto(tab)
+    screen = get_screenshot(region)
     for troop in troops:
-        troop_count_dict[troop] = 0
-        if troop.army is None:
-            print("Find many img: couldn't find file:", troop.name)
+        if troop.i_army is None:
+            print("Troops count flex: couldn't find file:", troop.name)
             continue
+        if tab == army_tab:
+            result, loc = troop.i_army.find_screen(screen, return_location=True, show_image=False)
+        else:
+            result, loc = troop.i_training.find_screen(screen, return_location=True, show_image=False)
 
-        result = cv2.matchTemplate(screen, troop.army, method)
-        min_val, val, min_loc, loc = cv2.minMaxLoc(result)
-        if val > confidence:
+        if result:
             x = max(loc[0] - 30, 0)
-            if troop.type == "troop":
-                numbers_image = screen[0: 50, x: x + 130]
-            else:
-                numbers_image = screen[270: 320, x: x + 130]
-            result = read_troop_count_image(numbers_image)
-            try:
-                result = int(result)
-                if result > 150: result = int(result / 10)
-            except:
-                result = 0
-            troop_count_dict[troop] = result
-    troop_count_dict[ram] = 0
-    troop_count_dict[log_thrower] = 0
-    troop_count_dict[siege_in_castle(account)] = 1
-    for key in troop_count_dict:
-        try:
-            print(key.name, '->', troop_count_dict[key])
-        except:
-            print(key, '->', troop_count_dict[key])
+            numbers_image = screen[0: 50, x: x + 130]
+            result = troop_numbers.read_screen(numbers_image, return_number=True)
+            if result > 200: result = int(result / 10)
+            add_to_dict(count_dict, troop, result)
 
-    return troop_count_dict
+    return count_dict
+
+def still_training(account, just_troops=False):
+    if account.has_siege: tabs = [troops_tab, spells_tab, siege_tab]
+    else: tabs = [troops_tab, spells_tab]
+    if just_troops: tabs = [troops_tab]
+    for tab in tabs:
+        goto(tab)
+        if i_army_clock.find(show_image=False): return True
+    return False
+
+def empty_count():
+    count = {}
+    for troop in troops:
+        count[troop] = 0
+    return count
+
+def print_count(count):
+    string = ""
+    for key in count:
+        string += f"{key}:{count[key]}. "
+    print(string)
+
+def army_count(account):
+    if still_training(account, just_troops=True): return "Still training"
+    count = empty_count()
+    count = troops_count_flex(army_tab, ARMY_EXISTING, just_troops, count)
+    count = troops_count_flex(army_tab, SPELLS_EXISTING, spells, count)
+    count = troops_count_flex(army_tab, ARMY_EXISTING, siege_troops, count)
+    count = troops_count_flex(army_tab, CASTLE_TROOPS, siege_troops, count)
+    print()
+    print("Army Count:")
+    print_count(count)
+    return count
+
+def full_count(account):
+    print("Full count - start")
+    count = empty_count()
+    if still_training(account, just_troops=True): return "Still training", "Still training"
+    count = troops_count_flex(army_tab, ARMY_EXISTING, just_troops, count)
+    count = troops_count_flex(army_tab, SPELLS_EXISTING, spells, count)
+    count = troops_count_flex(army_tab, ARMY_EXISTING, siege_troops, count)
+    army_count = count
+    count = troops_count_flex(troops_tab, TRAINING_RANGE, just_troops, count)
+    count = troops_count_flex(spells_tab, TRAINING_RANGE, spells, count)
+    if account.has_siege:
+        count = troops_count_flex(siege_tab, TRAINING_RANGE, siege_troops, count)
+
+    print()
+    print("Full Count:")
+    print_count(count)
+    return army_count, count
 
 def troop_delete_backlog():
     goto(troops_tab)
@@ -284,7 +338,7 @@ def siege_in_castle(account):
     for siege in [ram, log_thrower]:
         if siege.in_castle(): return siege
 
-def restock(required_troops, extra=True):
+def restock(required_troops, account, extra=True):
     print("Restock")
     print(troop_str(required_troops))
     count = Counter(required_troops)
@@ -294,6 +348,7 @@ def restock(required_troops, extra=True):
     print("Extra:", extra)
 
     for x in count:
+        if x.type == "siege" and not account.has_siege: continue
         x.start_train(count[x])
 
     if extra and len(extra_troops) > 0:
@@ -322,9 +377,94 @@ def request(account):
         print("Request - couldn't find request", val)
 
     job_time = datetime.now()
-    if account == account_1:
-        db_update(account_2, "donate", job_time)
-    else:
-        db_update(account_1, "donate", job_time)
+    account_to_donate = 1
+    if account.number == 1: account_to_donate = 2
+    db_update(account_to_donate, "donate", job_time, use_account_number=True)
 
+def castle_troops_change(required_troops):
+    goto(army_tab)
+    troops_to_delete = []
+    troops_to_add = []
+    current_troops = castle_troops_current()
+    for troop in troops:
+        surplus = current_troops.count(troop) - required_troops.count(troop)
+        if surplus != 0: print(troop, surplus)
+        if surplus > 0:
+            print("Surplus", troop, surplus)
+            for x in range(surplus):
+                troops_to_delete.append(troop)
+        elif surplus < 0:
+            print("Deficit", troop, surplus)
+            for x in range(-surplus):
+                troops_to_add.append(troop)
+    print("Delete:", troop_str(troops_to_delete))
+    print("Add:", troop_str(troops_to_add))
+    castle_troops_delete(troops_to_delete)
+    castle_troops_add(troops_to_add)
+
+def castle_troops_current():
+    screen = get_screenshot(CASTLE_TROOPS)
+    # show(screen)
+    current_troops = []
+    for troop in [super_barb, dragon, bloon, lightening, freeze]:
+        result, loc = troop.i_army.find_screen(screen, return_location=True)
+        if result:
+            x = max(loc[0] - 30, 0)
+            numbers_image = screen[0: 50, x: x + 130]
+            result = troop_numbers.read_screen(numbers_image, return_number=True)
+            for x in range(result):
+                current_troops.append(troop)
+    return current_troops
+
+def castle_troops_delete(troops_to_delete):
+    print(len(troops_to_delete))
+    if len(troops_to_delete) == 0: return
+    # Delete existing
+    i_army_edit.click()
+    for troop in troops_to_delete:
+        troop.i_army.click_region(CASTLE_TROOPS)
+    i_army_okay.click()
+    time.sleep(0.2)
+    i_surrender_okay.click()
+
+def castle_troops_add(troops_to_add):
+    # Delete request info
+    i_army_request.click()
+    time.sleep(.2)
+    i_army_donate_edit.click()
+    time.sleep(.2)
+    more_troops = True
+    while more_troops:
+        more_troops = i_remove_troops.click()
+        time.sleep(.2)
+
+    # goto(army_tab)
+    for troop in troops_to_add:
+        troop.i_army.click_region(CASTLE_REQUEST_AREA_2)
+        time.sleep(.2)
+
+        # print(troop.i_army.find_detail())
+        # print(troop.i_train.find_detail())
+        # print(troop.i_attack.find_detail())
+
+    time.sleep(0.1)
+    i_army_donate_confirm.click()
+    time.sleep(0.1)
+    i_army_request.click()
+    time.sleep(0.1)
+    i_army_request_send.click()
+
+
+# change_castle_troops([super_barb] * 7 + [lightening])
+# castle_troops_change([dragon, bloon, bloon, bloon, freeze])
+
+# goto(army_tab)
+# i_army_request.click()
+# time.sleep(0.1)
+# i_army_donate_edit.click()
+# time.sleep(5)
+# castle_troops_change([dragon, bloon, bloon, bloon])
+
+# goto(army_tab)
+# goto(pycharm)
 

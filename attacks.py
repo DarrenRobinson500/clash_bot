@@ -17,7 +17,7 @@ cannon5 = ("cannon_b", 5, 1)
 giant4 = ("giant", 4, 1)
 pekka1 = ("pekka", 1, 1)
 
-troops3 = [barb5, machine, bomb4, barb5, barb5, cannon5, barb5, barb5, barb5, cannon4, barb5, barb5, ]
+troops3 = [barb5, barb5, ]
 troops2 = [barb5, machine, bomb4, barb5, barb5, cannon5, barb5, barb5, barb5, cannon4, barb5, barb5, ]
 troops1 = [barb5, bomb5, giant4, barb5, pekka1, barb5, cannon3, machine, cannon3, barb5]
 
@@ -28,6 +28,46 @@ war1 = ["edrag",] * 2 + ["dragon"] * 12 + ["freeze"] * 11
 war2 = ["dragon"] * 12 + ["lightening"] * 11
 war3 = ["dragon"] * 12 + ["bloons"] * 3 + ["lightening"] * 11
 war = [None, war1, war2, war3]
+
+BARB80 = {
+            "name": "barb50",
+            "max_th": 4,
+            "wizard_check": True,
+            "towers_to_avoid": INFERNO_HIGH,
+            "bomb": False,
+            "bomb_target": WIZARDS,
+            "bomb_target2": None,
+            "lightening": 0,
+            "initial_troops": [],
+            "troop_group": [(barb, 8), (bomber, 1),],
+            "troop_groups": 8,
+            "final_troops": [],
+            "troop_pause": 0,
+            "drop_points": False,
+            "drop_point_troops": [],
+            "th_gold_adj": True,
+        }
+
+GIANT110 = {
+            "name": "giant200",
+            "max_th": 7,
+            "wizard_check": True,
+            "towers_to_avoid": INFERNO_HIGH,
+            "bomb": True,
+            "bomb_target": WIZARDS,
+            "bomb_target2": None,
+            "lightening": 6,
+            "initial_troops": [giant, giant, wizard, king],
+            "troop_group": [(giant, 3), (bomber, 1), (wizard, 2), ],
+            "spells": [],
+            "troop_groups": 7,
+            "final_troops": [goblin] * 11,
+            "troop_pause": 0,
+            "drop_points": False,
+            "drop_point_troops": ["super_goblin,"],
+            "th_gold_adj": True,
+        }
+
 
 GIANT200 = {
             "name": "giant200",
@@ -211,7 +251,7 @@ BARBS_13 = {
             "bomb_target2": WIZARDS,
             "lightening": 11,
             "spells": [],
-            "initial_troops": [king, ram, queen, warden, champ],
+            "initial_troops": [king, log_thrower, queen, warden, champ],
             "troop_group": [(super_barb, 60), ],
             "troop_groups": 1,
             "final_troops": [],
@@ -261,6 +301,7 @@ GOBLIN_13 = {
             "th_gold_adj": False,
         }
 
-DRAGONS_300 = [dragon] * 17 + [balloon] * 6 + [log_thrower] * 2 + [poison, lightening] + [freeze] * 11
-DRAGONS_260 = [dragon] * 15 + [balloon] + [poison] + [freeze] * 12
-DRAGONS_240 = [dragon] * 12 + [poison] + [lightening] * 10
+DRAGONS_300 = [dragon] * 28 + [bloon] * 6 + [log_thrower] * 6 + [poison, lightening] + [freeze] * 11
+DRAGONS_260 = [dragon] * 26 + [bloon] + [poison] + [freeze] * 20
+DRAGONS_240 = [dragon] * 24 + [poison] + [lightening] * 20
+

@@ -22,19 +22,19 @@ def wait(image):
             timed_click('reload_game', (0, 0), 2)
     return
 
-def find(image, confidence=0.55):
-    result = pag.locateCenterOnScreen(f'images/{image}.png', confidence=confidence)
-    # if not result:
-    #     try:
-    #         result = pag.locateCenterOnScreen(f'images/{image}1.png', confidence=confidence)
-    #     except:
-    #         pass
-    # print(image, result)
-    if result:
-        result = True
-    else:
-        result = False
-    return result
+# def find(image, confidence=0.55):
+#     result = pag.locateCenterOnScreen(f'images/{image}.png', confidence=confidence)
+#     # if not result:
+#     #     try:
+#     #         result = pag.locateCenterOnScreen(f'images/{image}1.png', confidence=confidence)
+#     #     except:
+#     #         pass
+#     # print(image, result)
+#     if result:
+#         result = True
+#     else:
+#         result = False
+#     return result
 
 
 def timed_click(image, offset=(0,0), dur=0, confidence=0.6):

@@ -36,18 +36,20 @@ class Number():
         for x, i in self.numbers:
             show(i, label=str(x))
 
-    def read(self, region):
+    def read(self, region, show_image=False, return_number=False):
         pag.screenshot(f'temp/number_set.png', region=region)
         screen = cv2.imread(f"temp/number_set.png", 0)
-        return self.read_screen(screen)
+        return self.read_screen(screen, show_image=show_image, return_number=return_number)
 
-    def read_screen(self, screen):
+    def read_screen(self, screen, show_image=False, return_number=False, show_rectangles=False):
         found = []
         for number, image in self.numbers:
             h, w = image.shape
             result = cv2.matchTemplate(screen, image, method)
-            # show(image)
-            # show(screen)
+            if show_image:
+                min_val, val, min_loc, loc = cv2.minMaxLoc(result)
+                show(image)
+                show(screen, label=str(round(val,2)))
             yloc, xloc = np.where(result >= self.confidence)
             z = zip(xloc, yloc)
             rectangles = []
@@ -59,51 +61,36 @@ class Number():
             if len(rectangles) > 0:
                 for rectangle in rectangles:
                     found.append((str(number), rectangle[0]))
+        # print("Number set - read screen (found variable):", found)
         result = ""
         found.sort(key=lambda tup: tup[1])
-        # print(found)
+        # print("Number set - read screen (found variable sorted):", found)
         prev_x = 0
         for y in found:
             # print(prev_x, y[1])
             if y[1] <= prev_x + 3:
                 found.remove(y)
+                # print("Number set - read screen - removed", y[0])
             prev_x = y[1]
         for y in found:
             result += y[0]
+        # print("Number set - read screen (result):", result)
+        if return_number:
+            try:
+                result = int(result)
+            except:
+                result = 0
+
+
         return result
 
 
-resource_numbers = Number(name="resource_numbers", directory="numbers_resources")
+resource_numbers = Number(name="resource_numbers", directory="numbers/resources")
 cost_numbers = Number(name="cost_numbers", directory="numbers_cost", confidence=0.85)
 build_time = Number(name="build_time", directory="numbers/time")
 research_time = Number(name="research_time", directory="numbers/research")
-
-
-
-
-# screen = cv2.imread(f"temp/mortar.png", 0)
-# screen_cost = screen[:,200:]
-# screen_count = screen[:,0:200]
-# show(screen)
-# result = cost_numbers.read_screen(screen_cost)
-# print(result)
-# result = cost_numbers.read_screen(screen_count)
-# print(result)
-
-# for number, image in cost_numbers.numbers:
-#         h, w = image.shape
-#         print(number)
-#         result = cv2.matchTemplate(screen, image, method)
-#         # show(image)
-#         # show(screen)
-#         yloc, xloc = np.where(result >= 0.8)
-#         rectangles = []
-#         z = zip(xloc, yloc)
-#         for (x, y) in z:
-#             rectangles.append([int(x), int(y), int(w), int(h)])
-#         for x in rectangles:
-#             cv2.rectangle(screen, x, (255,255,255), 1)
-#
-#
-# show(screen)
-#
+troop_numbers = Number(name="troop_numbers", directory="numbers/troop_count")
+selected_level = Number(name="selected_level", directory="numbers/levels", confidence=0.85)
+selected_tower = Number(name="selected_tower", directory="numbers/towers", confidence=0.9)
+trophies = Number(name="trophies", directory="numbers/trophies")
+coin_time = Number(name="coin_time", directory="numbers/coin")

@@ -19,7 +19,7 @@ def get_screenshot(region=None, colour=0, filename="temp"):
     except:
         return None
 
-def find_(image, screen, text="", show_image=False):
+def find(image, screen, text="", show_image=False):
     if image is None:
         print("Find - No image provided:", text)
         return 0,0,0
@@ -28,11 +28,14 @@ def find_(image, screen, text="", show_image=False):
         show(screen)
     y, x = image.shape
     # print("Find", image.shape, screen.shape)
-    result = cv2.matchTemplate(screen, image, method)
-    min_val, val, min_loc, loc = cv2.minMaxLoc(result)
-    rect = (loc[0], loc[1], x, y)
-    # print("Find", text, round(val,2))
-    return val, loc, rect
+    try:
+        result = cv2.matchTemplate(screen, image, method)
+        min_val, val, min_loc, loc = cv2.minMaxLoc(result)
+        rect = (loc[0], loc[1], x, y)
+        # print("Find", text, round(val,2))
+        return round(val, 2), loc, rect
+    except:
+        return 0,0,0
 
 def click(image, region=None, confidence=0.6, show_image=False):
     if image is None:
@@ -314,6 +317,8 @@ def find_many(image_str, region='all', confidence=0.6):
         pag.screenshot('temp/temp.png', region=region)
     screen = cv2.imread('temp/temp.png', 0)
     template = cv2.imread(f'images/{image_str}.png', 0)
+    # show(screen)
+    # show(template)
     if template is None:
         print("Find many: couldn't find file:", image_str)
         return []
@@ -385,7 +390,7 @@ def find_many_array(templates, region='all', confidence=0.6):
             for (x, y) in z:
                 rects.append([int(x), int(y), int(w), int(h)])
                 rects.append([int(x), int(y), int(w), int(h)])
-            # print(template_str, len(rects))
+            # print(template_str, len(xloc))
     rects, weights = cv2.groupRectangles(rects, 1, 0.2)
 
     return rects
@@ -662,7 +667,7 @@ def th_b():
     img_orig = img.copy()
     val, rect = find_tower(img, TH_B)
     result = False
-    if val > 0.60:
+    if val > 0.6:
         cv2.rectangle(img_orig, rect, (255, 255, 255), 2)
         result = True
 

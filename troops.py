@@ -1,8 +1,15 @@
+import openpyxl as xl
 from member import *
 from nav import *
 
 troops = []
+just_troops = []
+spells = []
+siege_troops = []
 troop_files = os.listdir("images/troops_new")
+troop_directory = 'images/troops_new/'
+slide_position = 1
+
 # print("Troop files:", troop_files)
 
 def get_image_from_file(troop, style):
@@ -10,7 +17,7 @@ def get_image_from_file(troop, style):
     if style == "": file = f'{troop}.png'
     image = None
     if file in troop_files:
-        image = cv2.imread('images/troops_new/' + file, 0)
+        image = cv2.imread(troop_directory + file, 0)
     else:
         print(f"Adding troop image: could not find '{file}'")
     return image
@@ -22,6 +29,7 @@ def get_image(troop, style):
     if style == "donate1": return object.donate1
     if style == "donate2": return object.donate2
     if style == "attack": return object.attack
+    if style == "research": return object.research
     return
 
 def get_super_troop(troop):
@@ -38,6 +46,7 @@ def get_super_troop(troop):
             click_rect(rect)
     pag.press("esc")
 
+
 class Troop():
     def __init__(self, name, type, slide, training_time, donate_bool, donate_preference, donations, donation_count):
         self.name = name
@@ -48,19 +57,32 @@ class Troop():
         self.donate_preference = donate_preference
         self.currently_training = False
         if type != "hero":
-            self.army = get_image_from_file(name, "army")
-            self.train = get_image_from_file(name, "train")
-            self.training = get_image_from_file(name, "training")
-            self.donate1 = get_image_from_file(name, "donate1")
-            self.donate2 = get_image_from_file(name, "donate2")
+            # self.army = get_image_from_file(name, "army")
+            self.i_army = Image(name=f"i_{name}_army", file=f'{troop_directory}{name}_army.png', no_of_regions=1, type="army", threshold=0.72)
+            # self.train = get_image_from_file(name, "train")
+            self.i_train = Image(name=f"i_{name}_train", file=f'{troop_directory}{name}_train.png', no_of_regions=1, type="train")
+            # self.training = get_image_from_file(name, "training")
+            self.i_training = Image(name=f"i_{name}_training", file=f'{troop_directory}{name}_training.png', no_of_regions=1, type="training")
+            # self.donate1 = get_image_from_file(name, "donate1")
+            self.i_donate1 = Image(name=f"i_{name}_donate1", file=f'{troop_directory}{name}_donate1.png', no_of_regions=1, type="donate1")
+            # self.donate2 = get_image_from_file(name, "donate2")
+            self.i_donate2 = Image(name=f"i_{name}_donate2", file=f'{troop_directory}{name}_donate2.png', no_of_regions=2, type="donate2")
+            self.i_research = Image(name=f"i_{name}_research", file=f'{troop_directory}{name}_research.png', no_of_regions=1, type="research")
         else:
             self.army = None
             self.train = None
             self.training = None
             self.donate1 = None
             self.donate2 = None
+            self.i_army = None
+            self.i_train = None
+            self.i_training = None
+            self.i_donate1 = None
+            self.i_donate2 = None
+            self.research = None
 
-        self.attack = get_image_from_file(name, "attack")
+        # self.attack = get_image_from_file(name, "attack")
+        self.i_attack = Image(name=f"i_{name}_attack", file=f'{troop_directory}{name}_attack.png')
         self.donations = donations
         self.donation_count = donation_count
         self.super_troop = False
@@ -68,32 +90,35 @@ class Troop():
             self.super_troop = True
 
         troops.append(self)
+        if type == "troop": just_troops.append(self)
+        if type == "spell": spells.append(self)
+        if type == "siege": siege_troops.append(self)
 
     def __str__(self):
         return self.name
 
     def in_castle(self):
-        val, loc, rect = find(self.army, get_screenshot(CASTLE_TROOPS), show_image=False)
+        val, loc, rect = find(self.i_army.image, get_screenshot(CASTLE_TROOPS), show_image=False)
         return val > 0.8
 
     def start_train(self, count, move_to_start=False):
+        global slide_position
         print("Start train:", self.name, self.type, count)
         # Set up
         if self.type == "troop":
             goto(troops_tab)
-            if self.slide == 2: slide(1, 2)
-            else: slide(2, 1)
-            make_room(self)
+            slide(slide_position, self.slide)
+            # make_room(self)
         if self.type == "spell":
             goto(spells_tab)
-            make_room(self)
+            # make_room(self)
         if self.type == "siege":
             goto(siege_tab)
             # make_room(self)
 
         # Train
         # for x in range(count):
-        val, loc, rect = find(self.train, get_screenshot(TRAIN_RANGE))
+        val, loc, rect = find(self.i_train.image, get_screenshot(TRAIN_RANGE))
         # rect_adj = [rect[0] + TRAIN_RANGE[0], rect[1] + TRAIN_RANGE[1], rect[2], rect[3]]
         if val < 0.8 and self.super_troop:
             get_super_troop(self)
@@ -107,14 +132,15 @@ class Troop():
         if move_to_start:
             move_to_queue_start(self)
 
-        print("Start train:", self.name, self.training_time, count)
+        print("Start train:", self.name, count)
         return self.training_time * count
 
     def delete(self, count):
         print("Troop delete")
+        if self.i_army.image is None: return
         goto(army_tab)
         click_cv2("edit_army")
-        val, loc, rect = find(self.army, get_screenshot(ARMY_EXISTING))
+        val, loc, rect = find(self.i_army.image, get_screenshot(ARMY_EXISTING))
         rect_adj = [rect[0] + ARMY_EXISTING[0], rect[1] + ARMY_EXISTING[1], rect[2], rect[3]]
         spot = pag.center(rect_adj)
         for x in range(count):
@@ -125,58 +151,99 @@ class Troop():
 
 # Make troop objects
 # Name, Type, Time, Donate
-troop_data = [
-    ("barb", "troop", 1, 5, False, 5, 0, 10),
-    ("archer", "troop", 1, 6, True, 5, 1, 10),
-    ("giant", "troop", 1, 30, True, 5, 0, 5),
-    ("wizard", "troop", 1, 30, True, 5, 0, 5),
-    ("bomber", "troop", 1, 15, False, 5, 0, 2),
-    ("goblin", "troop", 1, 7, False, 5, 0, 1),
-    ("bloon", "troop", 1, 30, True, 5, 0, 8),
-    ("healer", "troop", 1, 120, False, 5, 0, 1),
-    ("dragon", "troop", 1, 180, True, 2, 1, 1),
-    ("baby_drag", "troop", 1, 90, True, 5, 0, 1),
-    ("edrag", "troop", 1, 360, True, 3, 1, 1),
-    ("pekka", "troop", 1, 180, True, 4, 1, 1),
-    ("miner", "troop", 1, 40, True, 4, 0, 1),
-    ("yeti", "troop", 1, 240, True, 4, 0, 1),
-    ("bowler", "troop", 2, 60, True, 4, 0, 1),
-    ("super_barb", "troop", 1, 25, True, 1, 1, 20),
-    ("minion", "troop", 1, 15, False, 5, 0, 10),
-    ("super_minion", "troop", 10, 108, False, 10, 0, 1),
-    ("hog", "troop", 2, 45, True, 5, 0, 7),
-    ("lightening", "spell", 1, 180, True, 6, 0, 5),
-    ("freeze", "spell", 1, 180, True, 6, 0, 1),
-    ("poison", "spell", 1, 180, True, 7, 0, 2),
-    ("skeleton", "spell", 1, 180, True, 8, 0, 2),
-    ("rage", "spell", 1, 360, True, 6, 1, 1),
-    ("ram", "siege", 1, 20 * 60, True, 7, 1, 6),
-    ("slammer", "siege", 1, 20 * 60, True, 7, 0, 1),
-    ("log_thrower", "siege", 1, 20 * 60, True, 7, 0, 1),
-    ("siege", "siege", 1, 20 * 60, True, 7, 0, 1),
-    ("king", "hero", 1, 0, False, 8, 0, 0),
-    ("queen", "hero", 1, 0, False, 8, 0, 0),
-    ("warden", "hero", 1, 0, False, 8, 0, 0),
-    ("champ", "hero", 1, 0, False, 8, 0, 0),
-]
-print()
-for name, type, slide, training_time, donate_bool, donate_preference, donations, donation_count in troop_data:
-    print("Creating troop:", name)
-    Troop(name=name, type=type, slide=slide, training_time=training_time, donate_bool=donate_bool,
-          donate_preference=donate_preference, donations=donations, donation_count=donation_count)
+# troop_data = [
+#     ("barb", "troop", 1, 5, False, 5, 0, 1),
+#     ("archer", "troop", 1, 6, True, 5, 1, 1),
+#     ("giant", "troop", 1, 30, True, 5, 0, 3),
+#     ("wizard", "troop", 1, 30, True, 5, 0, 1),
+#     ("bomber", "troop", 1, 15, False, 5, 0, 1),
+#     ("goblin", "troop", 1, 7, False, 5, 0, 1),
+#     ("bloon", "troop", 1, 30, True, 5, 1, 3),
+#     ("healer", "troop", 1, 120, False, 5, 0, 1),
+#     ("dragon", "troop", 1, 180, True, 2, 1, 1),
+#     ("baby_drag", "troop", 1, 90, True, 5, 0, 1),
+#     ("edrag", "troop", 1, 360, True, 3, 1, 5),
+#     ("pekka", "troop", 1, 180, True, 4, 1, 1),
+#     ("miner", "troop", 1, 40, True, 4, 0, 1),
+#     ("yeti", "troop", 1, 240, True, 4, 0, 1),
+#     ("bowler", "troop", 2, 60, True, 4, 0, 1),
+#     ("super_barb", "troop", 1, 25, True, 1, 1, 10),
+#     ("minion", "troop", 1, 15, False, 5, 0, 1),
+#     ("super_minion", "troop", 10, 108, False, 10, 0, 1),
+#     ("hog", "troop", 2, 45, True, 5, 1, 1),
+#     ("ice_golem", "troop", 2, 150, True, 5, 0, 1),
+#     ("headhunter", "troop", 2, 60, True, 5, 1, 1),
+#     ("lightening", "spell", 1, 180, True, 6, 1, 2),
+#     ("heal", "spell", 1, 180, True, 7, 1, 1),
+#     ("freeze", "spell", 1, 180, True, 6, 1, 1),
+#     ("poison", "spell", 1, 180, True, 7, 1, 1),
+#     ("skeleton", "spell", 1, 180, True, 8, 0, 1),
+#     ("rage", "spell", 1, 360, True, 6, 1, 1),
+#     ("ram", "siege", 1, 20 * 60, True, 7, 0, 1),
+#     ("blimp", "siege", 1, 20 * 60, True, 7, 0, 1),
+#     ("slammer", "siege", 1, 20 * 60, True, 7, 1, 1),
+#     ("log_thrower", "siege", 1, 20 * 60, True, 7, 1, 1),
+#     ("siege", "siege", 1, 20 * 60, True, 7, 0, 1),
+#     ("king", "hero", 1, 0, False, 8, 0, 0),
+#     ("queen", "hero", 1, 0, False, 8, 0, 0),
+#     ("warden", "hero", 1, 0, False, 8, 0, 0),
+#     ("champ", "hero", 1, 0, False, 8, 0, 0),
+# ]
+
+levels_filename = 'C:/Users/darre/OneDrive/Darren/clash_bot/levels.xlsx'
+
+def load_troops():
+    wb = xl.load_workbook(levels_filename)
+    sheet = wb['Troops']
+    for row in range(2, sheet.max_row + 1):
+        name = sheet.cell(row, 1).value
+        type = sheet.cell(row, 2).value
+        slide = sheet.cell(row, 3).value
+        training_time = sheet.cell(row, 4).value
+        donate_bool = sheet.cell(row, 5).value
+        donate_preference = sheet.cell(row, 6).value
+        donations = sheet.cell(row, 7).value
+        donation_count = sheet.cell(row, 8).value
+
+        print("Creating troop:", name)
+        Troop(name=name, type=type, slide=slide, training_time=training_time, donate_bool=donate_bool,
+              donate_preference=donate_preference, donations=donations, donation_count=donation_count)
+
+    print()
+
+load_troops()
+
+# print()
+# for name, type, slide, training_time, donate_bool, donate_preference, donations, donation_count in troop_data:
+#     print("Creating troop:", name)
+#     Troop(name=name, type=type, slide=slide, training_time=training_time, donate_bool=donate_bool,
+#           donate_preference=donate_preference, donations=donations, donation_count=donation_count)
 
 barb = next((x for x in troops if x.name == 'barb'), None)
+archer = next((x for x in troops if x.name == 'archer'), None)
+goblin = next((x for x in troops if x.name == 'goblin'), None)
 giant = next((x for x in troops if x.name == 'giant'), None)
 wizard = next((x for x in troops if x.name == 'wizard'), None)
 bomber = next((x for x in troops if x.name == 'bomber'), None)
-balloon = next((x for x in troops if x.name == 'balloon'), None)
+bloon = next((x for x in troops if x.name == 'bloon'), None)
 dragon = next((x for x in troops if x.name == 'dragon'), None)
 edrag = next((x for x in troops if x.name == 'edrag'), None)
+minion = next((x for x in troops if x.name == 'minion'), None)
+hog = next((x for x in troops if x.name == 'hog'), None)
+golem = next((x for x in troops if x.name == 'golem'), None)
+witch = next((x for x in troops if x.name == 'witch'), None)
+lava_hound = next((x for x in troops if x.name == 'lava_hound'), None)
+ice_golem = next((x for x in troops if x.name == 'ice_golem'), None)
+
 super_barb = next((x for x in troops if x.name == 'super_barb'), None)
 
 lightening = next((x for x in troops if x.name == 'lightening'), None)
+heal = next((x for x in troops if x.name == 'heal'), None)
+rage = next((x for x in troops if x.name == 'rage'), None)
 freeze = next((x for x in troops if x.name == 'freeze'), None)
 poison = next((x for x in troops if x.name == 'poison'), None)
+skeleton = next((x for x in troops if x.name == 'skeleton'), None)
+clone = next((x for x in troops if x.name == 'clone'), None)
 
 queen = next((x for x in troops if x.name == 'queen'), None)
 king = next((x for x in troops if x.name == 'king'), None)
@@ -187,7 +254,6 @@ ram = next((x for x in troops if x.name == 'ram'), None)
 log_thrower = next((x for x in troops if x.name == 'log_thrower'), None)
 
 troops.sort(key=lambda x: x.donate_preference, reverse=False)
-
 
 def troop_str(required_troops):
     string = ""
@@ -258,4 +324,29 @@ def slide(slide_pos, slide_pos_target):
     pag.dragTo(end_x, 600, dur)
     time.sleep(1)
     return slide_pos
+
+def merge_troop_regions():
+    for image_type in ["donate1", "donate2"]:
+        all_images = [x for x in images if image_type in x.name]
+        print("List of images")
+        for image in all_images: print(image.name)
+
+        print("Adding regions")
+        for image1 in all_images:
+            for image2 in all_images:
+                if image1 == image2: continue
+                for region in image1.regions:
+                    if region not in image2.regions:
+                        image2.save_region(region)
+
+        print(all_images)
+        for image in all_images: print(image.name)
+
+# log_thrower.i_donate2.show_regions()
+
+# for x in troops:
+#     print(x)
+#     print(x.i_donate2.image)
+#     if x.i_donate2.image:
+#         show(x.i_donate2)
 

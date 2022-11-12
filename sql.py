@@ -24,12 +24,19 @@ def db_add(account, job, time):
     db_str = f"INSERT INTO jobs VALUES ({account.number}, '{job}', '{time}')"
     db(db_str)
 
-def db_update(account, job, time):
-    db_str = f"SELECT * FROM jobs WHERE account='{account.number}' and job = '{job}'"
+def db_update(account, job, time, use_account_number=False):
+    if use_account_number:
+        account_number = account
+    else:
+        account_number = account.number
+    db_str = f"SELECT * FROM jobs WHERE account='{account_number}' and job = '{job}'"
     existing = len(db(db_str))
-    print("Current Records:", existing, account.number, job)
+    # print("DB Update - Current records:", existing, account.number, job)
+
     if existing == 1:
-        db_str = f"UPDATE jobs SET time='{time}' WHERE account = {account.number} AND job = '{job}'"
+        # print("DB Update", account, job, time)
+        db_str = f"UPDATE jobs SET time='{time}' WHERE account = {account_number} AND job = '{job}'"
+        # print("DB Str:", db_str)
         db(db_str)
     else:
         print("Records not updated")
@@ -77,13 +84,13 @@ def db_read(account, job):
     # print(time.astimezone().isoformat())
     return time
 
-def initial_entries():
+def initial_entries(accounts, zero_account):
     db_delete('all')
-    time = datetime.now() + timedelta(days=14)
-    for x in range(1,4):
-        for y in ["build", "attack", "build_b", "attack_b", "clock", "coin", "research", "research_b", "donate"]:
-        # for y in ["donate", ]:
+    time = datetime.now() + timedelta(days=0)
+    for x in accounts:
+        for y in ["build", "research", "lose_trophies", "attack", "donate", "coin"]:
             db_add(x, y, time)
+    db_add(zero_account, "sweep", time)
 
 def add_entries():
     time = datetime.now() + timedelta(minutes=-20)
@@ -97,9 +104,13 @@ def add_entries_all():
 
 def update_entries():
     time = datetime.now() + timedelta(minutes=0)
-    for x in range(1,3):
-        for y in ["build", "attack", "build_b", "attack_b", "clock", "coin", "research", "research_b", "donate",]:
+    for x in range(1,4):
+        for y in ["build", "attack", "build_b", "attack_b", "clock", "coin", "research", "research_b", "donate", "coin"]:
             db_update(x, y, time)
+
+# db_update(2, "lose_trophies", datetime.now(), use_account_number=True)
+# db_update(3, "lose_trophies", datetime.now(), use_account_number=True)
+# db_update(4, "lose_trophies", datetime.now(), use_account_number=True)
 
 def db_next_job():
     db_str = "SELECT * FROM jobs ORDER BY time"
@@ -111,12 +122,14 @@ def db_next_job():
         if job_time <= datetime.now():
             current_jobs.append(job_info)
     current_jobs.sort(key=lambda tup: tup[0])
-    return current_jobs[0]
+    if len(current_jobs) > 0:
+        return current_jobs[0]
+    else:
+        return result[0]
 
 
 
 # db_create_table()
-# initial_entries()
 # db_delete('all')
 # db_delete_table('jobs')
 # db_add(2, "attack", datetime.datetime.now())
@@ -125,10 +138,11 @@ def db_next_job():
 # db_view()
 # add_entries()
 # add_entries()
-# for x in [2,]:
-#     db_update(x, "attack", datetime.now() + timedelta(minutes=-20))
+# for x in [account_3,]:
+#     db_update(x, "attack", datetime.now() + timedelta(minutes=3))
 # add_entries_all()
 # db_delete_job("'attack_b'")
-# db_view(no=50)
+
+db_view(no=50)
 #
 # db_next_job()

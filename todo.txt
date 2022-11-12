@@ -1,0 +1,4 @@
+To Do
+ - Remove def find => replace with images
+ - Clan castle request - change troops
+ - Region rationalisation

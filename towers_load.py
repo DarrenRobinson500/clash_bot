@@ -18,7 +18,6 @@ def load_towers():
         print("Creating tower:", name)
         Tower(name=name, village=village, category=category, resource=resource, priority=priority)
 
-    Tower(name="champ", village="main", category="hero", resource="dark", priority=1)
     print()
 
 def load_levels():
@@ -55,6 +54,9 @@ load_levels()
 
 cannon = next((x for x in towers if x.name == "cannon"), None)
 mortar = next((x for x in towers if x.name == "mortar"), None)
+tesla = next((x for x in towers if x.name == "tesla"), None)
+wall = next((x for x in towers if x.name == "wall"), None)
+# warden = next((x for x in towers if x.name == "warden"), None)
 
 # for tower in towers:
 #     for level in tower.levels:

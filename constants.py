@@ -3,7 +3,7 @@ import os
 
 PRINT_CV2 = False
 VERBOSE_LOG = False
-current_account = 0
+# current_account = 0
 
 last_move = ["none", 0]
 BACKLOG = (160, 190, 1550, 140)
@@ -124,14 +124,15 @@ BUILDER_B_ZERO_REGION = (903, 70, 100, 50)
 BUILDER_B_LIST_REGION = (705, 160, 390, 600)
 BUILDER_LIST_REGION = (500, 160, 350, 600)
 BUILDER_LIST_TIMES = (800, 239, 160, 50)
+NEXT_COMPLETION = (549, 227, 350, 50)
 RESOURCES_G = (1426,80, 290, 47)
 RESOURCES_E = (1426,172, 290, 47)
 RESOURCES_D = (1514,261, 200, 47)
 RESOURCES = (1420,60, 350, 250)
 LEVEL = (115,67, 80, 80)
-SELECTED_TOWER = (435, 677, 1000, 60)
+SELECTED_TOWER = (435, 677, 1000, 70)
 SELECTED_TOWER_BUTTONS = (340,758, 1100, 200)
-TROPHIES = (190,190, 80, 40)
+TROPHIES = (190,190, 90, 40)
 CHAT_SPOT = (400, 900, 250, 140)
 FIND_A_MATCH_SPOT = (1475, 610, 400, 170)
 ATTACK_SPOT = (535, 70, 400, 100)
@@ -151,6 +152,9 @@ main_regions = [
     SELECTED_TOWER, TROPHIES, CHAT_SPOT, ATTACK_SPOT, ATTACKING_SPOT
                 ]
 
+TRADER_TIME = (293,179,190,60)
+
+
 # LAB
 RESEARCH_TIME = (633,311, 400, 55)
 
@@ -165,7 +169,6 @@ RAID_WEEKEND_NEXT_SPOT = (1300,880,300,100)
 ACCOUNT_ICONS = (1136, 467, 110, 420)
 change_accounts_regions = [ACCOUNT_ICONS]
 
-
 # Donations
 DONATE_BUTTONS =(520, 100, 230, 800)
 DONATE_AREA = (795, 15, 860, 700)
@@ -175,6 +178,7 @@ BUILDER_LIST_TIMES_B = (1000, 240, 100, 30)
 WIN_ZONE = (869,808, 130, 50)
 BOAT_B_SPOT = (1083, 286, 220, 250)
 builder_regions = [BUILDER_REGION, BUILDER_LIST_TIMES_B, WIN_ZONE, BOAT_B_SPOT]
+REMAINING_ATTACKS = (123, 831, 107, 30)
 
 # Army screen
 ARMY_TABS = (120, 50, 1500, 160)
@@ -182,11 +186,15 @@ ARMY_TIME = (1018, 165, 90, 40)
 ARMY_TIME_B = (919, 919, 154, 40)
 ARMY_TROOPS = (318, 168, 150, 45)
 CLAN_TROOPS = (631, 706, 75, 45)
+CASTLE_REQUEST_AREA_1 = (381, 172, 1350, 200)
+CASTLE_REQUEST_AREA_2 = (381, 376, 1350, 400)
 TRAIN_RANGE = (145, 535, 1600, 370)
+TRAINING_RANGE = (145, 189, 1600, 150)
 DELETE_REGION = (1650, 200, 100, 60)
 DELETE_2_REGION = (1520, 200, 100, 60)
-ARMY_EXISTING = (150,210, 1040, 454)
+ARMY_EXISTING = (150,210, 1600, 454)
 SPELLS_EXISTING = (150,473, 950, 175)
+SIEGE_EXISTING = (1284, 210, 450, 200)
 ARMY_CREATE = (145, 534, 1520, 370)
 END_ATTACK_SPOT = (75,675,250,150)
 ARMY_CLOCK_SPOT = (920,145,100,100)
@@ -196,15 +204,23 @@ troops_regions = [ARMY_TABS, TRAIN_RANGE, DELETE_REGION, ARMY_CREATE, ]
 spells_regions = [ARMY_TABS, TRAIN_RANGE, DELETE_REGION, ARMY_CREATE, ]
 siege_regions = [ARMY_TABS, TRAIN_RANGE, DELETE_REGION, ARMY_CREATE, ]
 
+# War screen
+WAR_DONATION_AREA = (438, 191, 1000, 350)
+WAR_BANNER = (790, 145, 300, 95)
+
+# Trader
+CLOCK_POTION = (630, 200, 200, 200)
+RESEARCH_POTION = (970, 600, 200, 200)
+
 
 # Army screen - builder
 ATTACK_B_OKAY_SPOT = (823,828, 250, 100)
 
 # Capital Coin
-CAPITAL_COIN_TIME = (250,270, 175,50)
+CAPITAL_COIN_TIME = (325, 325, 150, 40)
 
 # Attacking
-TROOP_ZONE = (259, 831, 1350, 200)
+TROOP_ZONE = (100, 831, 1350, 200)
 DAMAGE = (1650,740, 130, 50)
 COIN_REGION = (150, 165, 150, 40)
 AVAILABLE_GOLD = (150, 165, 150, 40)
@@ -223,11 +239,6 @@ WHITE = [(255, 255, 255),(254, 254, 254),(253, 253, 253),]
 # === DEFENCES ===
 # ================
 
-TH_B = ["thb7", "thb8", "thb8b",]
-WALL_B = ["wallb1", ]
-EXTRAS_B = ['attack_b/mine_b', 'attack_b/mine_b2', 'attack_b/mine_b3', 'attack_b/lab_b', 'attack_b/lab_b2', 'attack_b/lab_b3', 'attack_b/camp_b', 'attack_b/camp_b2', 'attack_b/gold_storage_b', 'attack_b/gold_storage_b2', 'attack_b/elixir_storage_b', 'attack_b/elixir_storage_b2', 'attack_b/barracks_b', 'attack_b/gem_mine_b', 'attack_b/elixir_pump_b', 'attack_b/elixir_pump_b2', 'attack_b/elixir_pump_b3', 'attack_b/clock_b', 'attack_b/clock_b2', 'attack_b/machine_b', 'attack_b/machine_b2']
-WALLS_B = ['attack_b/w1', ]
-
 def dir_to_list(dir):
     list = []
     path = "C://Users//darre//PycharmProjects//clash_bot//images//" + dir
@@ -235,6 +246,13 @@ def dir_to_list(dir):
     for x in dir_list:
         list.append(dir + "/" + x[:-4])
     return list
+
+TH_B = dir_to_list("attack_b/th_b")
+WALL_B = ["wallb1", ]
+EXTRAS_B = ['attack_b/mine_b', 'attack_b/mine_b2', 'attack_b/mine_b3', 'attack_b/lab_b', 'attack_b/lab_b2', 'attack_b/lab_b3', 'attack_b/camp_b', 'attack_b/camp_b2', 'attack_b/gold_storage_b', 'attack_b/gold_storage_b2', 'attack_b/elixir_storage_b', 'attack_b/elixir_storage_b2', 'attack_b/barracks_b', 'attack_b/gem_mine_b', 'attack_b/elixir_pump_b', 'attack_b/elixir_pump_b2', 'attack_b/elixir_pump_b3', 'attack_b/clock_b', 'attack_b/clock_b2', 'attack_b/machine_b', 'attack_b/machine_b2']
+WALLS_B = ['attack_b/w1', ]
+
+# print(TH_B)
 
 ATTACK_B_TROOPS = ["barb_b", "machine_b_attacking", "bomb_b", "cannon_b", "giant", "pekka"]
 
@@ -289,3 +307,12 @@ LEVELS = []
 for x in [2,7,9,10,13,15,17]: LEVELS.append((f"level{x}", x))
 
 OBSTACLES = ["bush", ]
+
+def objects_to_str(objects):
+    string = ""
+    for x in objects:
+        try:
+            string += x.name + ", "
+        except:
+            pass
+    return string[0:-1]

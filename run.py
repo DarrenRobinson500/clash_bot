@@ -1,23 +1,25 @@
 from bot import *
+from war import *
+from research import *
 
-sweep_period = timedelta(minutes=20)
+sweep_period = timedelta(minutes=120)
 
 def run():
     global current_account
-    current_account = account_0
     next_sweep = datetime.now() + (datetime.min - datetime.now()) % sweep_period
     db_update(account_0, "sweep", next_sweep)
     # sweep()
     for account in accounts:
+        print("Run:", account, account.attacking)
         if account.attacking:
             db_update(account, "attack", datetime.now() + timedelta(minutes=-20))
+        if account.donating():
+            db_update(account, "donate", datetime.now() + timedelta(minutes=-20))
 
-    db_update(account_0, "sweep", datetime.now() + timedelta(minutes=-10))
+    # db_update(account_0, "sweep", datetime.now() + timedelta(minutes=-10))
 
-    global current_location
-    current_location = "main"
+    change_current_location(pycharm)
     print_info()
-    # time.sleep(7)
 
     while True:
         run_job(db_next_job(), sweep_period)
@@ -26,15 +28,6 @@ def wait(minutes):
     for x in range(minutes):
         print(f"Waiting: {x} of {minutes} minutes")
         time.sleep(60)
-
-def walls():
-    walls = 150
-    x = 0
-    while walls >= 0:
-        date_to_print = datetime.now() + timedelta(days=x)
-        print(date_to_print.strftime('%d %b'), walls)
-        walls -= 5
-        x += 1
 
 def rapid_attack(account):
     start()
@@ -74,58 +67,46 @@ def test2(account):
             print(result)
             # show(result, 10000, screen, 0.7)
 
-# def actual_troop_count():
-#     troop_count_dict = {}
-#     for x in TROOPS:
-#         count = troop_count(x)
-#         troop_count_dict[x] = count
-#     return troop_count_dict
 
-def war_prep():
-    goto(main)
+
+def info_grab():
     for account in accounts:
-        print(objects_to_str(account.war_troops))
-        change_accounts(account.number, "main")
-        army_prep(account, account.war_troops)
+        change_accounts_fast(account)
+        if account == account_1:
+            war_get_status_image()
+        get_resources()
+        if account.th > 5:
+            donate(account)
+            capital_coin()
+        account.update_resources(current_resources())
+        account.next_update()
+        clock()
+        get_resources()
 
 
-def test(account, village):
-    # change_accounts(2)
-    goto(main)
-    upgrade()
-    # build("main")
+# info_grab()
 
+# sweep(fast=True)
+
+# get_trader_info(account_2)
+# create_combined_builders_image(accounts)
+
+# initial_entries(accounts, account_0)
+# war_prep()
 # wait(30)
-
-# rapid_trophy_loss(1)
-# rapid_attack(1)
+# war_donations()
+# sweep()
+# print(clone)
+# print(golem)
+run()
 # war_prep()
 
-# print(objects_to_str(troops))
+# next_research(account_4)
 
-
-# village = "main"
-# get_available_upgrades_levels(village)
-
-# build("main")
+# get_time_coin()
 
 # goto(main)
-# upgrade()
+# goto(lab)
 
-# troops_count(account_2)
-# attack(account_2, account_2.army_troops)
-# sweep()
-# run()
-donate(account_1)
-
-# result = get_available_upgrades_levels("main")
-# for tower, cost, count in result:
-#     print(tower, cost, count)
-
-
-
-# goto_list_top("main")
-
-# print(i_lab8.regions)
 goto(pycharm)
 

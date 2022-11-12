@@ -138,7 +138,7 @@ class Loc():
             time.sleep(0.1)
             path.parameter.click()
             # val, outcome = click(image, region=region)
-            time.sleep(0.3)
+            time.sleep(0.4)
             hold_key("down", 0.3)
         elif action == "click_identifier":
             self.identifiers[0].click()
@@ -176,6 +176,16 @@ class Loc():
             hold_key("a", 0.1)
             hold_key("s", 0.1)
             val, outcome = click_cv2("nav/boat_to")
+        elif action == "goto_lab":
+            pag.click(BOTTOM_LEFT)
+            for i_lab in labs:
+                val, x, rect = i_lab.find_detail(fast=False, show_image=False)
+                if val > i_lab.threshold:
+                    i_lab.click()
+                    time.sleep(0.2)
+                    i_research.click()
+                    time.sleep(0.2)
+                    break
         elif action == "goto_main":
             hold_key("w", 0.1)
             hold_key("d", 0.1)
@@ -265,6 +275,9 @@ no_bluestacks = Loc(name="no_bluestacks", identifier=i_bluestacks, accessible=Fa
 no_bluestacks.id_absence = True
 no_bluestacks.id_val_max = 0.75
 no_bluestacks.height = -0.5
+# maintenance = Loc(name="maintenance", identifier=i_maintenance, accessible=False)
+maintenance2 = Loc(name="maintenance2", identifier=i_maintenance2, accessible=False)
+
 main = Loc(name="main", identifier=i_builder, accessible=True)
 unknown = Loc(name="unknown", identifier=i_x, accessible=False)
 unknown.height = -0.5
@@ -277,8 +290,8 @@ builder = Loc(name="builder", identifier=i_master_builder, accessible=True)
 builder.add_identifier(i_otto)
 
 overlays = []
-for overlay in [i_another_device, i_ad_cross, i_reload, i_reload_game, i_ad_cross, i_try_again, i_return_home, i_pre_app, i_okay, i_okay2, i_okay3, i_okay4, i_okay5,
-                i_next2, i_bluestacks_message_cross, i_return_home_2, i_return_home_3, i_red_cross, i_red_cross2, ]:
+for overlay in [i_another_device, i_ad_cross, i_ad_back, i_reload, i_reload_game, i_ad_cross, i_try_again, i_return_home, i_pre_app, i_okay, i_okay2, i_okay3, i_okay4, i_okay5,
+                i_next2, i_bluestacks_message_cross, i_return_home_2, i_return_home_3, i_red_cross, i_red_cross2, i_bluestacks_app]:
     new_overlay = Loc(name=overlay.name[2:], identifier=overlay, accessible=False)
     if overlay == i_another_device:
         new_overlay.add_default_path(action="reload", parameter=None, expected_loc=main)
@@ -297,7 +310,9 @@ troops_tab = Loc(name="troops_tab", identifier=i_troops_tab, accessible=True)
 spells_tab = Loc(name="spells_tab", identifier=i_spells_tab, accessible=True)
 siege_tab = Loc(name="siege_tab", identifier=i_siege_tab, accessible=True)
 
-attack = Loc(name="attack", identifier=i_multiplayer, accessible=True)
+lab = Loc(name="lab", identifier=i_research_upgrading, accessible=True)
+
+n_attack = Loc(name="attack", identifier=i_multiplayer, accessible=True)
 find_a_match = Loc(name="find_a_match", identifier=i_next, accessible=True)
 attacking = Loc(name="attacking", identifier=i_surrender, accessible=False)
 attacking_end_1 = Loc(name="attacking_end_1", identifier=i_surrender_okay, accessible=False)
@@ -317,6 +332,8 @@ pycharm.add_default_path(action="pycharm_to_main", parameter=i_app, expected_loc
 unknown.add_default_path(action="wait", parameter=0.2, expected_loc=main)
 no_bluestacks.add_default_path(action="start_bluestacks", parameter=None, expected_loc=main)
 no_app.add_default_path(action="start_app", parameter=None, expected_loc=main)
+# maintenance.add_default_path(action="reload", parameter=None, expected_loc=main)
+maintenance2.add_default_path(action="reload", parameter=None, expected_loc=main)
 
 # Main
 main.add_path(destination=pycharm, action="click", parameter=i_pycharm_icon, expected_loc=pycharm)
@@ -329,10 +346,11 @@ main.add_path(destination=settings, action='click', parameter=i_settings_on_main
 main.add_path(destination=change_account, action='click', parameter=i_settings_on_main, expected_loc=settings)
 main.add_path(destination=forge, action='goto_forge', parameter='', expected_loc=forge)
 main.add_path(destination=builder, action="goto_builder", parameter='', expected_loc=builder)
-main.add_path(destination=find_a_match, action="click", parameter=i_attack, expected_loc=attack)
-main.add_path(destination=attack, action="click_p", parameter=i_attack, expected_loc=attack)
+main.add_path(destination=find_a_match, action="click", parameter=i_attack, expected_loc=n_attack)
+main.add_path(destination=n_attack, action="click_p", parameter=i_attack, expected_loc=n_attack)
 main.add_path(destination=attack_b2, action="goto_builder", parameter="", expected_loc=builder)
 main.add_path(destination=attacking_b, action="goto_builder", parameter="", expected_loc=builder)
+main.add_path(destination=lab, action="goto_lab", parameter="", expected_loc=lab)
 
 # Builder
 builder.add_path(destination=pycharm, action="click", parameter=i_pycharm_icon, expected_loc=pycharm)
@@ -343,6 +361,9 @@ builder.add_path(destination=main, action="goto_main", parameter='', expected_lo
 builder.add_path(destination=attack_b2, action="click", parameter=i_attack_b, expected_loc=attack_b2)
 builder.add_path(destination=attacking_b, action="click", parameter=i_attack_b, expected_loc=attack_b2)
 builder.add_default_path(action="goto_main", parameter='', expected_loc=main)
+
+# Research
+lab.add_default_path(action="key", parameter="esc", expected_loc=main)
 
 # Chat
 chat.add_height(1)
@@ -378,10 +399,10 @@ siege_tab.add_path(destination=spells_tab, action="click", parameter=i_spells_ta
 siege_tab.add_path(destination=army_tab, action="click", parameter=i_army_tab_dark, expected_loc=army_tab)
 
 # Attacking
-attack.add_path(destination=find_a_match, action="click", parameter=i_find_a_match, expected_loc=find_a_match)
+n_attack.add_path(destination=find_a_match, action="click", parameter=i_find_a_match, expected_loc=find_a_match)
 find_a_match.add_default_path(action="click", parameter=i_end_battle, expected_loc=main)
 attacking.add_default_path(action="click", parameter=i_surrender, expected_loc=main)
-attack.add_default_path(action="key", parameter="esc", expected_loc=main)
+n_attack.add_default_path(action="key", parameter="esc", expected_loc=main)
 
 attack_b2.add_default_path(action="key", parameter="esc", expected_loc=builder)
 attack_b2.add_path(destination=attacking_b, action='click', parameter=i_find_now, expected_loc=attacking_b)
@@ -390,8 +411,8 @@ attacking_b_end_1.add_default_path(action="click_identifier", parameter=None,exp
 
 def goto(destination):
     global current_location
-    if current_location == destination: return
     print(f"Goto: {current_location} -> {destination}")
+    if current_location == destination: return
     loop_count = 0
     path_found = True
     while current_location != destination and path_found and loop_count < 5 and current_location:
@@ -413,10 +434,11 @@ def loc(guess=None):
     global current_location
     time.sleep(0.2)
 
-    for identifier in another_device.identifiers:
-        if identifier.find(fast=True):
-            print("Found reload")
-            return another_device
+    # for identifier in another_device.identifiers:
+    #     if identifier.find(fast=True):
+    #         print("Found reload")
+    #         return another_device
+    #
 
     # print("A", datetime.now() - start_time)
     if guess and guess != unknown:
@@ -425,42 +447,51 @@ def loc(guess=None):
             guesses += latest_path.most_common_actuals()
         for guess in guesses:
             for identifier in guess.identifiers:
-                val, loc, rect = identifier.find_detail(fast=True)
+                val, loc, rect = identifier.find_detail(fast=False)
                 result = val > identifier.threshold
                 if result != guess.id_absence:
                     # print(identifier.name, val, result, val)
-                    print("Loc guess", guess)
+                    # print("Loc guess", guess)
                     current_location = guess
                     return current_location
                 print("Loc guess (fail)", guess, identifier.name, val, identifier.threshold)
 
-    # if guess:
-    #     for x in range(3):
-    #         time.sleep(0.3)
-    #         for identifier in guess.identifiers:
-    #             show_image = False
-    #             if guess.name == "attack":
-    #                 show_image = False
-    #             if identifier.find(show_image=show_image) != guess.id_absence:
-    #                 current_location = guess
-    #                 return current_location
-    #             print("Loc guess (fail)", guess, identifier.name)
+    for location in locs:
+        if location.height >= 4:
+            for identifier in location.identifiers:
+                val, loc, rect = identifier.find_detail(fast=True)
+                result = val > identifier.threshold
+                if result != location.id_absence:
+                    current_location = location
+                    # print("Loc success (overlays)", location, "FAST", identifier.name, round(val,2), identifier.threshold, result)
+                    return current_location
+                # print("Loc fail (overlays)", location, "FAST", identifier.name, round(val,2), identifier.threshold, identifier.regions)
 
     current_location = unknown
     # Search all locations quickly then thoroughly
     # print("B", datetime.now() - start_time)
-    for fast in [True, True, False]:
-        for location in locs:
-            # print("C", datetime.now() - start_time)
-            for identifier in location.identifiers:
-                val, loc, rect = identifier.find_detail(fast=fast)
-                result = val > identifier.threshold
-                if result != location.id_absence:
-                    current_location = location
-                    # print("Loc success (all locations)", location, fast, identifier.name, round(val,2), identifier.threshold, result)
-                    return current_location
-                # print("Loc fail (all locations)", location, fast, identifier.name, round(val,2), identifier.threshold, identifier.regions)
-        time.sleep(0.5)
+    for location in locs:
+        # print("C", datetime.now() - start_time)
+        for identifier in location.identifiers:
+            val, loc, rect = identifier.find_detail(fast=True)
+            result = val > identifier.threshold
+            if result != location.id_absence:
+                current_location = location
+                # print("Loc success (all locations)", location, "FAST", identifier.name, round(val,2), identifier.threshold, result)
+                return current_location
+            # print("Loc fail (all locations)", location, "FAST", identifier.name, round(val,2), identifier.threshold, identifier.regions)
+    time.sleep(0.5)
+    for location in locs:
+        # print("C", datetime.now() - start_time)
+        for identifier in location.identifiers:
+            val, loc, rect = identifier.find_detail(fast=False)
+            result = val > identifier.threshold
+            if result != location.id_absence:
+                current_location = location
+                # print("Loc success (all locations)", location, "SLOW", identifier.name, round(val,2), identifier.threshold, result)
+                return current_location
+            # print("Loc fail (all locations)", location, "SLOW", identifier.name, round(val,2), identifier.threshold, identifier.regions)
+    time.sleep(0.5)
 
     # print("D", datetime.now() - start_time)
     print(f"Loc: (guess unsuccessful). Guess:{guess}. Actual:{current_location}")
@@ -468,30 +499,31 @@ def loc(guess=None):
     return current_location
 
 def click_builder():
-    print("Click builder")
+    # print("Click builder")
+    pag.click(BOTTOM_LEFT)
     for image in [i_builder, i_master, i_otto]:
-        result = image.click()
-        if result: return True
+        if image.find():
+            image.click()
+            return True
 
     return False
 
 def move_list(direction, dur=0.5):
-    # dur = 0.5
     if direction == "up":
         pag.moveTo(855,666)
         pag.dragTo(855,210, dur)
     if direction == "down":
+        # pag.press("s")
         pag.moveTo(855,210)
         pag.dragTo(855,666, dur)
 
 def goto_list_top(village):
     if village == "main": goto(main)
     else: goto(builder)
-    time.sleep(1)
+    time.sleep(.2)
     pag.click(BOTTOM_LEFT)
+    time.sleep(.2)
     click_builder()
-    if village == "main": region = BUILDER_LIST_REGION
-    else: region = BUILDER_B_LIST_REGION
     at_top = False
     count = 0
     time.sleep(0.2)
@@ -507,7 +539,7 @@ def goto_list_top(village):
     print("Goto list top", val)
     pag.moveTo(855, loc[1])
     pag.dragTo(855,210, 1)
-    time.sleep(3)
+    time.sleep(2)
 
 def goto_list_very_top(village):
     if village == "main": goto(main)
@@ -557,14 +589,17 @@ def attack_b_get_screen():
     pag.screenshot('temp/attacking_b.png')
 
 def zoom_out():
-    time.sleep(1)
-    for x in range(1):
-        pag.keyDown('ctrl')
-        time.sleep(0.1)
-        pag.scroll(-300)
-        time.sleep(0.1)
-        pag.keyUp('ctrl')
-        time.sleep(0.1)
+    time.sleep(0.1)
+    hold_key("down", 0.2)
+
+    # time.sleep(1)
+    # for x in range(1):
+    #     pag.keyDown('ctrl')
+    #     time.sleep(0.1)
+    #     pag.scroll(-300)
+    #     time.sleep(0.1)
+    #     pag.keyUp('ctrl')
+    #     time.sleep(0.1)
 
 
 def start():
@@ -579,33 +614,13 @@ def start():
 def end():
     click_cv2("pycharm")
 
-def change_accounts(account_number, target_base="main"):
-    global current_account
-    if current_account:
-        print(f"Change accounts from {current_account} to {account_number}")
-    if account_number == current_account: return
-    goto(change_account)
-    time.sleep(0.2)
-    loc = [(0,0), (1184, 651), (1184, 524), (1184, 792), ][account_number]
-    pag.click(loc)
-    time.sleep(0.2)
-    if target_base == "main": goto(main)
-    else: goto(builder)
-    zoom_out()
-    current_account = account_number
-    try:
-        if current_account.gold is None:
-            current_account.update_resources(current_resources())
-    except:
-        pass
-    return
 
 def current_resources():
-    time.sleep(1)
+    time.sleep(.1)
     result_array = []
-    for x in [RESOURCES_G, RESOURCES_E, RESOURCES_D]:
-        result_array.append(read_text(x, WHITE, True))
-    if result_array[0] > 20000000: result_array[0] = result_array[0]/10
+    for region in [RESOURCES_G, RESOURCES_E, RESOURCES_D]:
+        result_array.append(resource_numbers.read(region, show_image=False, return_number=True))
+    if result_array[0] > 30000000: result_array[0] = result_array[0]/10
     # print("Current Resources:", result_array)
     return result_array
 
@@ -663,10 +678,26 @@ def tour():
     goto(troops_tab)
     goto(spells_tab)
     goto(siege_tab)
-    goto(attack)
+    goto(n_attack)
     goto(find_a_match)
     goto(builder)
     goto(attacking_b)
+
+def spare_builders(account, village):
+    if village == "main":
+        goto(main)
+        region = BUILDER_ZERO_REGION
+    else:
+        goto(builder)
+        region = BUILDER_B_ZERO_REGION
+    screen = get_screenshot(region, filename=f"tracker/builders{account.number}{village}")
+    if i_builder_zero.find_screen(screen, show_image=False): return 0
+    if i_builder_one.find_screen(screen): return 1
+    return 2
+
+def change_current_location(loc):
+    global current_location
+    current_location = loc
 
 
 # Set-up
@@ -682,3 +713,25 @@ current_location = pycharm
 # goto(pycharm)
 
 # goto(builder)
+
+# goto(main)
+# click_builder()
+# move_list("down")
+# goto_list_top("main")
+# goto(python)
+
+
+# for i in labs:
+#     if i.name == "towers/labs//lab11":
+#         goto(main)
+#         i.add_loc(main)
+#         goto(i.loc)
+#         i.show_regions_on_screen()
+#         i.show_regions()
+#         current_location = pycharm
+
+# goto(main)
+# lab11 = next((x for x in images if "lab11" in x.name), None)
+# lab11.click()
+# lab11.show_regions()
+# lab11.show_regions_on_screen()
