@@ -11,6 +11,20 @@ TOP_MIDDLE = (700,0,700,300)
 locs = []
 latest_path = None
 
+def start_up():
+    not_there_yet = True
+    while not_there_yet:
+        if not_there_yet:
+            start_loop_again = False
+        for i in [i_ad_cross, i_maximise, i_start_eyes_2, i_start_eyes, i_heart, i_bluestacks]:
+            if start_loop_again: continue
+            if i.find():
+                i.click()
+                start_loop_again = True
+                if i.name == "i_maximise":
+                    not_there_yet = False
+            time.sleep(0.1)
+
 def most_common(list, number):
     if len(list) == 0: return None
     number = min(number, len(list))
@@ -30,6 +44,7 @@ class Loc():
         self.identifiers = [identifier, ]
         self.paths = []
         self.default_path = None
+        self.sleep_path = self.Path(loc=self, destination=self, action="reload", parameter=None, expected_loc=self)
         self.height = 0
         self.id_absence = False
         self.optional=optional
@@ -127,7 +142,10 @@ class Loc():
         # print("Perform action:", action, parameter)
         outcome = False
         if action == "click":
-            path.parameter.click()
+            if parameter == "bottom_left":
+                pag.click(BOTTOM_LEFT)
+            else:
+                path.parameter.click()
             # print("Click:", round(val,2))
         elif action == "click_p":
             time.sleep(0.1)
@@ -145,17 +163,16 @@ class Loc():
             # val, outcome = click(self.identifier_images[0])
             # print("Clicking identifier:", val)
         elif action == "reload":
+            print("Perform action - reload")
             close_app()
-            # click_cv2("pycharm")
             rest_time = 20
-            for x in range(rest_time):
-                print(f"Resting {x} of {rest_time} minutes")
-                pag.moveTo(x * 10, 500)
-                time.sleep(60)
-            click_cv2('nav/bluestacks')
-            wait_and_click('start_barb')
-            wait_and_click('start_cross')
-            wait_and_click('maximise')
+            interval = 1
+            end_time = time_to_string(datetime.now() + timedelta(minutes=20))
+            print(f"Resting: {end_time}")
+            for x in range(int(rest_time / interval)):
+                pag.moveTo(x * 10 * interval, 500)
+                time.sleep(60 * interval)
+            start_up()
             outcome = True
         elif action == "key":
             pag.press(parameter)
@@ -186,22 +203,28 @@ class Loc():
                     i_research.click()
                     time.sleep(0.2)
                     break
+        elif action == "goto_castle":
+            pag.click(BOTTOM_LEFT)
+            for i in castles:
+                val, x, rect = i.find_detail(fast=False, show_image=False)
+                if val > i.threshold:
+                    i.click()
+                    time.sleep(0.2)
+                    break
+        elif action == "goto_games":
+            hold_key("w", 0.1)
+            i_caravan.click()
         elif action == "goto_main":
             hold_key("w", 0.1)
             hold_key("d", 0.1)
             val, outcome = click_cv2("nav/boat_to")
         elif action == "start_bluestacks":
             os.startfile("C:\Program Files (x86)\BlueStacks X\BlueStacks X.exe")
-            wait_and_click('heart')
-            wait_and_click('start_barb')
-            i_ad_cross.click()
-            wait_and_click('maximise')
+            start_up()
             outcome = True
         elif action == "start_app":
-            click_cv2('nav/bluestacks')
-            wait_and_click('start_barb')
-            i_ad_cross.click()
-            wait_and_click('maximise')
+            print("Action: start app")
+            start_up()
             outcome = True
         elif action == "log_in":
             self.identifiers[0].click()
@@ -311,6 +334,11 @@ spells_tab = Loc(name="spells_tab", identifier=i_spells_tab, accessible=True)
 siege_tab = Loc(name="siege_tab", identifier=i_siege_tab, accessible=True)
 
 lab = Loc(name="lab", identifier=i_research_upgrading, accessible=True)
+lab.add_identifier(i_lab_girl)
+
+l_games = Loc(name="games", identifier=i_games, accessible=True)
+l_castle = Loc(name="castle", identifier=i_treasury, accessible=True)
+
 
 n_attack = Loc(name="attack", identifier=i_multiplayer, accessible=True)
 find_a_match = Loc(name="find_a_match", identifier=i_next, accessible=True)
@@ -351,6 +379,8 @@ main.add_path(destination=n_attack, action="click_p", parameter=i_attack, expect
 main.add_path(destination=attack_b2, action="goto_builder", parameter="", expected_loc=builder)
 main.add_path(destination=attacking_b, action="goto_builder", parameter="", expected_loc=builder)
 main.add_path(destination=lab, action="goto_lab", parameter="", expected_loc=lab)
+main.add_path(destination=l_games, action="goto_games", parameter="", expected_loc=l_games)
+main.add_path(destination=l_castle, action="goto_castle", parameter="", expected_loc=l_castle)
 
 # Builder
 builder.add_path(destination=pycharm, action="click", parameter=i_pycharm_icon, expected_loc=pycharm)
@@ -364,6 +394,12 @@ builder.add_default_path(action="goto_main", parameter='', expected_loc=main)
 
 # Research
 lab.add_default_path(action="key", parameter="esc", expected_loc=main)
+
+# Games
+l_games.add_default_path(action="key", parameter="esc", expected_loc=main)
+
+# Castle
+l_castle.add_default_path(action="click", parameter="bottom_left", expected_loc=main)
 
 # Chat
 chat.add_height(1)
@@ -499,7 +535,7 @@ def loc(guess=None):
     return current_location
 
 def click_builder():
-    # print("Click builder")
+    print("Click builder")
     pag.click(BOTTOM_LEFT)
     for image in [i_builder, i_master, i_otto]:
         if image.find():
@@ -520,6 +556,7 @@ def move_list(direction, dur=0.5):
 def goto_list_top(village):
     if village == "main": goto(main)
     else: goto(builder)
+    # click_builder()
     time.sleep(.2)
     pag.click(BOTTOM_LEFT)
     time.sleep(.2)
@@ -538,7 +575,7 @@ def goto_list_top(village):
     val, loc, rect = i_suggested_upgrades.find_detail()
     print("Goto list top", val)
     pag.moveTo(855, loc[1])
-    pag.dragTo(855,210, 1)
+    pag.dragTo(855,210, .5)
     time.sleep(2)
 
 def goto_list_very_top(village):
@@ -627,13 +664,15 @@ def current_resources():
 def reset():
     if "BlueStacksWeb.exe" in (p.name() for p in psutil.process_iter()):
         print("Bluestacks Running")
-        click_cv2('bluestacks_icon')
+        # click_cv2('bluestacks_icon')
         goto("main")
     else:
         os.startfile("C:\Program Files (x86)\BlueStacks X\BlueStacks X.exe")
         wait_cv2('start_d')
         pag.click((338,603)) # this is the love heart
-        wait_and_click('start_eyes')
+        time.sleep(15)
+        i_start_eyes.click()
+        i_start_eyes_2.click()
         wait_and_click('maximise')
         wait_cv2("attack")
 
@@ -660,13 +699,10 @@ def close_app():
         click_cv2('bluestacks_icon')
         time.sleep(0.2)
     val, loc, rect = find_cv2("nav/close_cross")
-    print(val)
     if val > 0.6:
         click_rect(rect)
         time.sleep(0.2)
         click_cv2("nav/close_close")
-
-
 
 def tour():
     goto(main)
@@ -703,35 +739,3 @@ def change_current_location(loc):
 # Set-up
 locs.sort(key=lambda x: x.height, reverse=True)
 current_location = pycharm
-# tour()
-# goto(pycharm)
-
-# goto(main)
-# print(loc())
-
-# goto(attacking_b)
-# goto(pycharm)
-
-# goto(builder)
-
-# goto(main)
-# click_builder()
-# move_list("down")
-# goto_list_top("main")
-# goto(python)
-
-
-# for i in labs:
-#     if i.name == "towers/labs//lab11":
-#         goto(main)
-#         i.add_loc(main)
-#         goto(i.loc)
-#         i.show_regions_on_screen()
-#         i.show_regions()
-#         current_location = pycharm
-
-# goto(main)
-# lab11 = next((x for x in images if "lab11" in x.name), None)
-# lab11.click()
-# lab11.show_regions()
-# lab11.show_regions_on_screen()

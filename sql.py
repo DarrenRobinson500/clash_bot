@@ -21,7 +21,9 @@ def db_delete_table(table):
     db(db_str)
 
 def db_add(account, job, time):
-    db_str = f"INSERT INTO jobs VALUES ({account.number}, '{job}', '{time}')"
+    if not isinstance(account, int):
+        account = account.number
+    db_str = f"INSERT INTO jobs VALUES ({account}, '{job}', '{time}')"
     db(db_str)
 
 def db_update(account, job, time, use_account_number=False):
@@ -32,7 +34,7 @@ def db_update(account, job, time, use_account_number=False):
     db_str = f"SELECT * FROM jobs WHERE account='{account_number}' and job = '{job}'"
     existing = len(db(db_str))
     # print("DB Update - Current records:", existing, account.number, job)
-
+    print(existing)
     if existing == 1:
         # print("DB Update", account, job, time)
         db_str = f"UPDATE jobs SET time='{time}' WHERE account = {account_number} AND job = '{job}'"
@@ -65,6 +67,20 @@ def db_view(job='all', no=5):
             print("Account:", x[0], " Job:", x[1], tabs + "Time:", time)
         count += 1
 
+def db_view_builds(job='all', no=5):
+    output = db_get(job='all', no=no)
+    count = 0
+    for account, job, time in output:
+        if count < no:
+            if job in ["build", "research"]:
+                time = string_to_time(time)
+                time = time_to_string(time)
+                tabs = "\t"
+                if len(job) <= 5: tabs += "\t"
+                if len(job) <= 9: tabs += "\t"
+                print("Account:", account, " Job:", job, tabs + "Time:", time)
+                count += 1
+
 def db_get(job='all', no=5):
     if job == 'all':
         db_str = "SELECT * FROM jobs ORDER BY time"
@@ -91,16 +107,20 @@ def initial_entries(accounts, zero_account):
         for y in ["build", "research", "lose_trophies", "attack", "donate", "coin"]:
             db_add(x, y, time)
     db_add(zero_account, "sweep", time)
+    db_add(zero_account, "games", time)
 
 def add_entries():
     time = datetime.now() + timedelta(minutes=-20)
     for x in range(1,4):
-        for y in ["sweep",]:
+        for y in ["sweep"]:
             db_add(x, y, time)
 
 def add_entries_all():
+    print("add_entries all")
     time = datetime.now() + timedelta(minutes=-20)
-    db_add(0, "sweep", time)
+    db_add(0, "games", time)
+
+# add_entries_all()
 
 def update_entries():
     time = datetime.now() + timedelta(minutes=0)

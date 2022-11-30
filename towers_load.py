@@ -25,7 +25,7 @@ def load_levels():
     sheet = wb['Levels']
     for row in range(2, sheet.max_row + 1):
         name = sheet.cell(row, 1).value
-        level = sheet.cell(row, 2).value
+        number = sheet.cell(row, 2).value
         th = sheet.cell(row, 3).value
         gold = sheet.cell(row, 4).value
         elixir = sheet.cell(row, 5).value
@@ -41,9 +41,13 @@ def load_levels():
 
         tower = next((x for x in towers if x.name == name.lower()), None)
         if tower:
-            tower.add_level(tower, level, th, gold, elixir, dark, days)
+            tower.add_level(tower, number, th, gold, elixir, dark, days)
         else:
             print(f"No {name.lower()} found")
+
+def return_tower(tower_name):
+    return next((x for x in towers if x.name == tower_name), None)
+
 
 load_towers()
 towers.sort(key=lambda x: x.priority, reverse=False)
@@ -52,11 +56,15 @@ load_levels()
 # for tower in towers:
 #     tower.print_tower()
 
-cannon = next((x for x in towers if x.name == "cannon"), None)
-mortar = next((x for x in towers if x.name == "mortar"), None)
-tesla = next((x for x in towers if x.name == "tesla"), None)
-wall = next((x for x in towers if x.name == "wall"), None)
-# warden = next((x for x in towers if x.name == "warden"), None)
+cannon = return_tower("cannon")
+mortar = return_tower("mortar")
+wall = return_tower("wall")
+camp = return_tower("camp")
+spring_trap = return_tower("spring_trap")
+
+# print(cannon.remaining_time(1, 5))
+
+# print(spring_trap.remaining_time(1, 8))
 
 # for tower in towers:
 #     for level in tower.levels:

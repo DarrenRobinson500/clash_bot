@@ -1,6 +1,7 @@
 from bot import *
-from war import *
+# from war import *
 from research import *
+from games import *
 
 sweep_period = timedelta(minutes=120)
 
@@ -8,13 +9,15 @@ def run():
     global current_account
     next_sweep = datetime.now() + (datetime.min - datetime.now()) % sweep_period
     db_update(account_0, "sweep", next_sweep)
+    games = False
     # sweep()
-    for account in accounts:
-        print("Run:", account, account.attacking)
-        if account.attacking:
-            db_update(account, "attack", datetime.now() + timedelta(minutes=-20))
-        if account.donating():
-            db_update(account, "donate", datetime.now() + timedelta(minutes=-20))
+    if not games:
+        for account in accounts:
+            print("Run:", account, account.attacking)
+            if account.attacking:
+                db_update(account, "attack", datetime.now() + timedelta(minutes=-20))
+            if account.donating():
+                db_update(account, "donate", datetime.now() + timedelta(minutes=-20))
 
     # db_update(account_0, "sweep", datetime.now() + timedelta(minutes=-10))
 
@@ -22,7 +25,7 @@ def run():
     print_info()
 
     while True:
-        run_job(db_next_job(), sweep_period)
+        run_job(db_next_job(), sweep_period, games=games)
 
 def wait(minutes):
     for x in range(minutes):
@@ -83,30 +86,9 @@ def info_grab():
         clock()
         get_resources()
 
-
-# info_grab()
-
-# sweep(fast=True)
-
-# get_trader_info(account_2)
-# create_combined_builders_image(accounts)
-
-# initial_entries(accounts, account_0)
-# war_prep()
-# wait(30)
-# war_donations()
 # sweep()
-# print(clone)
-# print(golem)
+wait(5)
 run()
-# war_prep()
-
-# next_research(account_4)
-
-# get_time_coin()
-
-# goto(main)
-# goto(lab)
 
 goto(pycharm)
 

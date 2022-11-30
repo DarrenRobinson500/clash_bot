@@ -45,7 +45,9 @@ class Number():
         found = []
         for number, image in self.numbers:
             h, w = image.shape
+            # print(image.shape)
             result = cv2.matchTemplate(screen, image, method)
+
             if show_image:
                 min_val, val, min_loc, loc = cv2.minMaxLoc(result)
                 show(image)
@@ -65,7 +67,7 @@ class Number():
         result = ""
         found.sort(key=lambda tup: tup[1])
         # print("Number set - read screen (found variable sorted):", found)
-        prev_x = 0
+        prev_x = -4
         for y in found:
             # print(prev_x, y[1])
             if y[1] <= prev_x + 3:
@@ -76,6 +78,10 @@ class Number():
             result += y[0]
         # print("Number set - read screen (result):", result)
         if return_number:
+            result = result.replace("e", "")
+            result = result.replace("g", "")
+            result = result.replace("h", "")
+
             try:
                 result = int(result)
             except:
@@ -87,10 +93,12 @@ class Number():
 
 resource_numbers = Number(name="resource_numbers", directory="numbers/resources")
 cost_numbers = Number(name="cost_numbers", directory="numbers_cost", confidence=0.85)
+tower_count = Number(name="tower_count", directory="numbers/tower_count", confidence=0.85)
 build_time = Number(name="build_time", directory="numbers/time")
-research_time = Number(name="research_time", directory="numbers/research")
+research_time = Number(name="research_time", directory="numbers/research", confidence=0.85)
 troop_numbers = Number(name="troop_numbers", directory="numbers/troop_count")
-selected_level = Number(name="selected_level", directory="numbers/levels", confidence=0.85)
+selected_level = Number(name="selected_level", directory="numbers/levels", confidence=0.9)
 selected_tower = Number(name="selected_tower", directory="numbers/towers", confidence=0.9)
-trophies = Number(name="trophies", directory="numbers/trophies")
+trophies = Number(name="trophies", directory="numbers/trophies", confidence=0.85)
 coin_time = Number(name="coin_time", directory="numbers/coin")
+war_donation_count = Number(name="war_donation_count", directory="numbers/war_donation_count", confidence=0.85)

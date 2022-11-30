@@ -2,15 +2,13 @@ from operator import attrgetter
 
 from nav import *
 from towers_load import *
-from sql import *
 from tracker import *
+from utilities import *
 
-def build(account, village):
+def build(account, village="main"):
     builders = spare_builders(account, village)
     print("Build - spare builders", builders)
     if builders == 0: return
-    if village == "main": goto(main)
-    else: goto(builder)
     remove_trees(village)
     if account.use_suggestion_b and village == "builder":
         # print("Using suggestion")
@@ -21,7 +19,7 @@ def build(account, village):
         # print("Build", gold, elixir)
         upgrade_currency = "gold"
         if elixir > gold: upgrade_currency = "elixir"
-        # print(upgrade_currency)
+        print(upgrade_currency)
         upgrade_wall(upgrade_currency, select_tower_bool=False)
 
         return
@@ -33,191 +31,172 @@ def build(account, village):
         need_walls = False
     preferences = get_preferences(available_options)
 
+    print("Needs walls", need_walls)
     if need_walls:
         print("Build", account, "Building walls")
         count = 1
-        if account.th <= 8: count = 20
+        if account.th <= 12: count = 2
+        if account.th <= 11: count = 5
+        if account.th <= 8: count = 5
         upgrade_currency = "gold"
         if preferences[0].resource == "gold": upgrade_currency = "elixir"
+        print(upgrade_currency)
         for x in range(count):
             upgrade_wall(upgrade_currency)
-
-
 
     for preference in preferences:
         select_tower(village, preference)
         time.sleep(0.2)
         upgrade()
         if spare_builders(account, village) == 0:
+            account.attacking = True
             db_update(account, "attack", datetime.now() + timedelta(minutes=2))
+            get_castle_resources()
             return
-
-
-
-# def get_available_upgrades(village):
-#     print("Get available upgrades")
-#     if village == "main": goto(main)
-#     else: goto(builder)
-#     goto_list_top(village)
-#     available_upgrades = []
-#     if village == "main": region = BUILDER_LIST_REGION
-#     else: region = BUILDER_B_LIST_REGION
-#     # for scroll_direction in ["up", "final"]:
-#     for scroll_direction in ["up", "up", "down", "final"]:
-#         screen = get_screenshot(region)
-#         for tower in towers:
-#             if tower.village == village:
-#                 if tower not in available_upgrades:
-#                     show_image = False
-#                     if tower.name == "lab": show_image = False
-#                     val, loc, rect = find(tower.i_text, screen, text=tower.name, show_image=show_image)
-#                     print("Available upgrades", tower.name, round(val,2))
-#
-#                     # check tower isn't above suggested upgrades
-#                     if val > 0.85:
-#                         val2, loc2, rect2 = i_suggested_upgrades.find_detail()
-#                         if val2 > i_suggested_upgrades.threshold:
-#                             print(loc[1] + region[1], loc2[1])
-#                             if loc[1] + region[1] < loc2[1]: val = 0
-#
-#                     # if tower.name == "wizard_tower": print("Val:", val)
-#                     if val > 0.80:
-#                         print("Appending")
-#                         available_upgrades.append(tower)
-#                         tower_region = [region[0] + rect[0], region[1] + rect[1], 480, 30]
-#                         get_screenshot(tower_region, filename=f"{tower.name}")
-#         if scroll_direction != "final":
-#             move_list(scroll_direction, dur=2)
-#             time.sleep(3)
-#     available_upgrades.sort(key=lambda x: x.priority, reverse=False)
-#     print("Available upgrades:", objects_to_str(available_upgrades))
-#     return available_upgrades
 
 def get_available_upgrades(village):
     print("Get available upgrades")
-    if village == "main": goto(main)
-    else: goto(builder)
-
     goto_list_top(village)
-    available_upgrades = []
-    all_upgrades = []
-    if village == "main": region = BUILDER_LIST_REGION
-    else: region = BUILDER_B_LIST_REGION
-    for scroll_direction in ["up", "up", "down", "final"]:
-        screen = get_screenshot(region)
-        for tower in towers:
-            if tower.village == village:
-                if tower not in all_upgrades:
-                    show_image = False
-                    if tower.name == "lab": show_image = False
-                    val, loc, rect = find(tower.i_text, screen, text=tower.name, show_image=show_image)
-                    if val > 0.75:
-                        val2, loc2, rect2 = i_suggested_upgrades.find_detail()
-                        if val2 > i_suggested_upgrades.threshold:
-                            # print(loc[1] + region[1], loc2[1])
-                            if loc[1] + region[1] < loc2[1]: val = 0
+    bottom_image_previous = None
+    available_upgrades, all_upgrades = [], []
 
-                    if val > 0.77:
-                        tower_region = [region[0] + rect[0], region[1] + rect[1], 480, 30]
-                        get_screenshot(tower_region, filename="temp_tower")
-                        i = cv2.imread("temp/temp_tower.png", 1)
-                        all_upgrades.append(tower)
-                        if has_cash_2(i):
-                            available_upgrades.append(tower)
-        if scroll_direction != "final":
-            move_list(scroll_direction, dur=2)
-            time.sleep(3)
-    # print("Available upgrades (unsorted):", objects_to_str(available_upgrades))
+    at_bottom, count = False, 0
+    while not at_bottom and count < 5:
+        all_upgrades, available_upgrades = identify_towers(village, all_upgrades, available_upgrades)
+        bottom_image_current = get_screenshot(BUILDER_BOTTOM)
+        at_bottom = image_similar(bottom_image_previous, bottom_image_current)
+        bottom_image_previous = bottom_image_current
+        move_list("up", dur=1)
+        time.sleep(.2)
+        count += 1
+    all_upgrades, available_upgrades = identify_towers(village, all_upgrades, available_upgrades)
+    move_list("down", dur=1)
+    all_upgrades, available_upgrades = identify_towers(village, all_upgrades, available_upgrades)
+
     available_upgrades.sort(key=lambda x: x.priority, reverse=False)
     all_upgrades.sort(key=lambda x: x.priority, reverse=False)
     print("Available upgrades:", objects_to_str(available_upgrades))
-    return available_upgrades, all_upgrades
 
-def get_available_upgrades_levels(account, village):
-    print("Get available upgrades with levels")
-    if village == "main": goto(main)
-    else: goto(builder)
-    goto_list_top(village)
-    available_upgrades = []
+    return all_upgrades, available_upgrades
+
+def image_similar(bottom_image_previous, bottom_image_current, confidence=0.8):
+    if bottom_image_current is None or bottom_image_previous is None: return False
+    result = cv2.matchTemplate(bottom_image_previous, bottom_image_current, method)
+    min_val, val, min_loc, loc = cv2.minMaxLoc(result)
+    print("Image similar:", val)
+    return val > confidence
+
+def identify_towers(village, all_upgrades, available_upgrades):
     if village == "main": region = BUILDER_LIST_REGION
     else: region = BUILDER_B_LIST_REGION
-    for scroll_direction in ["up", "up", "down", "final"]:
-        screen = get_screenshot(region)
-        # show(screen)
-        for tower in towers:
-            if tower.village == village:
+    screen = get_screenshot(region)
+    for tower in towers:
+        if tower.village == village:
+            if tower not in all_upgrades:
                 show_image = False
-                # if tower.name == "wizard_tower": show_image = True
+                if tower.name == "lab": show_image = False
                 val, loc, rect = find(tower.i_text, screen, text=tower.name, show_image=show_image)
-                # if tower.name == "wizard_tower": print("Val:", val)
-                # print("Get available upgrades with levels", tower, val)
-                if val > 0.85:
-                    tower_region = [region[0] + rect[0], region[1] + rect[1] - 3, 480, 40]
-                    screen_2 = get_screenshot(tower_region, filename=f"{tower.name}")
-                    level, count = get_level(screen_2, tower)
-                    print(tower, level, count)
-                    available_upgrades.append((tower, level, count))
-                    account.add_available_upgrades((tower, level, count))
-                    # if account.available_upgrades
-        if scroll_direction != "final":
-            move_list(scroll_direction, dur=2)
-            time.sleep(3)
-    # available_upgrades.sort(key=lambda x: x.priority, reverse=False)
-    # print("Available upgrades:", objects_to_str(available_upgrades))
-    return available_upgrades
+                print("Get available upgrades:", tower, val)
+                if val > 0.75:
+                    val2, loc2, rect2 = i_suggested_upgrades.find_detail()
+                    if val2 > i_suggested_upgrades.threshold:
+                        # print(loc[1] + region[1], loc2[1])
+                        if loc[1] + region[1] < loc2[1]: val = 0
 
-def clean_cost(string):
-    string = string.replace("g", "")
-    string = string.replace("h", "")
-    try:
-        cost = int(string)
-    except:
-        cost = 0
-    return cost
+                if val > 0.80:
+                    # print("Val > 0.8")
+                    tower_region = [region[0] + rect[0], region[1] + rect[1], 480, 30]
+                    get_screenshot(tower_region, filename="temp_tower")
+                    i = cv2.imread("temp/temp_tower.png", 1)
+                    all_upgrades.append(tower)
+                    if tower == wall: show(i)
+                    cash = has_cash_2(i)
+                    print("Cash:", cash)
+                    if cash:
+                        available_upgrades.append(tower)
+    return all_upgrades, available_upgrades
 
-def get_level(screen, tower):
-    screen_cost = screen[:, 200:]
+def get_all_upgrades(account, village):
+    print("Get available upgrades")
+    goto_list_very_top(village)
+    bottom_image_previous = None
+    upgrades = []
+
+    at_bottom, count = False, 0
+    while not at_bottom and count < 5:
+        upgrades = identify_towers_with_levels(upgrades)
+        bottom_image_current = get_screenshot(BUILDER_BOTTOM)
+        at_bottom = image_similar(bottom_image_previous, bottom_image_current)
+        bottom_image_previous = bottom_image_current
+        move_list("up", dur=1)
+        time.sleep(.2)
+        count += 1
+    upgrades = identify_towers_with_levels(upgrades)
+    move_list("down", dur=1)
+    upgrades = identify_towers_with_levels(upgrades)
+
+    upgrades.sort(key=lambda x: x[0].priority, reverse=False)
+    print("Available upgrades:")
+    total_time = timedelta(days=0)
+    for tower, level, count in upgrades:
+        if level is None:
+            print(" -", tower, count, "No level")
+        else:
+            remaining_time = tower.remaining_time(level.number, account.th) * count
+            total_time += remaining_time
+            print(" -", tower, level.number, count, "Remaining Time:", remaining_time)
+    print("Total time:", total_time)
+    return total_time
+
+def identify_towers_with_levels(upgrades):
+    gap = int((661 - 196) / 9)
+    points = []
+    for x in range(9):
+        point = (600, 196 + x * gap)
+        points.append(point)
+    print("Points", points)
+
+    for point in points:
+        result = get_tower(point)
+        if result:
+            tower_region = [point[0], point[1] - gap / 2, 200, gap]
+            screen = get_screenshot(tower_region, filename="temp_tower")
+            # show(screen)
+            count = tower_count.read_screen(screen, show_image=False, return_number=True)
+            if count == 0 or count == "": count = 1
+
+            # print(result)
+            existing = next((x for x in upgrades if x[0] == result[0] and x[1] == result[1]), None)
+            if not existing:
+                upgrades.append((result[0], result[1], count))
+    return upgrades
+
+def get_tower(loc):
+    # Level
+    pag.click(loc)
+    time.sleep(0.35)
+    filename = f'temp/temp_read_tower.png'
+    pag.screenshot(filename, region=SELECTED_TOWER)
+    screen = cv2.imread(filename, 0)
+    tower_name = selected_tower.read_screen(screen)
+    tower = return_tower(tower_name)
+    if tower is None: return
+    level_int = selected_level.read_screen(screen, show_image=False, return_number=True)
+    level = tower.return_level(level_int)
+    print("Get Tower", tower, level, level_int)
+
+    return tower, level, 1
+
+
+
+def get_count(screen, tower, screen_loc):
+    # Count
     screen_count = screen[:, 0:200]
-    result_cost = cost_numbers.read_screen(screen_cost)
-    result_count = clean_cost(cost_numbers.read_screen(screen_count))
-    if result_count == 0: result_count = 1
-    result_cost = clean_cost(result_cost) * 2
-    result_level = None
-    for level in tower.levels:
-        # print(level.tower, level.level, level.gold)
-        if level.gold == result_cost:
-            result_level = level
-
-    if result_level == None:
-        print("Get level failure")
-        # print("Printing all towers")
-        # for tower_x in towers:
-        #     for level_x in tower_x.levels:
-        #         print(level_x.tower, level_x.level, level_x.gold)
-        # print()
-        # print("Problem tower details")
-        print("Tower:", tower, tower.levels)
-        print("Cost read from builder list:", result_cost)
-        print("Available levels")
-        for level in tower.levels:
-            print(level.tower, level.level, level.gold)
-
-    # print("Get level:", tower, result_cost, result_count)
-    # print(result_level)
-    return result_level, result_count
-
-# print()
-# screen = cv2.imread(f'temp/mortar.png',0)
-# level, count = get_level(screen, mortar)
-# print(mortar.name, level.days * count)
+    count = tower_count.read_screen(screen_count, show_image=False, return_number=True)
+    if count == 0 or count == "": count = 1
+    return count
 
 
-
-def total_build_time(village):
-    available_upgrades = get_available_upgrades(village)
-    print("Total build time:", objects_to_str(available_upgrades))
-    # for tower in available_upgrades[0]:
-    select_tower(village, available_upgrades[0])
 
 def select_tower(village, tower):
     print("Select tower:", tower)
@@ -226,16 +205,20 @@ def select_tower(village, tower):
     else: region = BUILDER_B_LIST_REGION
     if check_if_tower_visible(tower, region): return
     goto_list_top(village)
-    for scroll_direction in ["up", "up", "down", "final"]:
+    bottom_image_previous, at_bottom, count = None, False, 0
+    while not at_bottom and count < 5:
         screen = get_screenshot(region)
         val, loc, rect = find(tower.i_text, screen, show_image=False)
         print("Select tower", tower, val)
         if val > 0.8:
             click(tower.i_text, region=region)
             return True
-        if scroll_direction != "final":
-            move_list(scroll_direction, dur=2)
-            time.sleep(3)
+        bottom_image_current = get_screenshot(BUILDER_BOTTOM)
+        at_bottom = image_similar(bottom_image_previous, bottom_image_current)
+        bottom_image_previous = bottom_image_current
+        move_list("up", dur=1)
+        time.sleep(.2)
+        count += 1
     return False
 
 def check_if_tower_visible(tower, region):
@@ -261,29 +244,23 @@ def get_preference(available_towers):
     return chosen_upgrade
 
 def get_preferences(available_towers):
-    preferences = []
-    try:
-        available_towers.remove(wall)
-    except:
-        pass
     available_towers.sort(key=lambda x: x.priority, reverse=False)
-    print("Get preferences - sorted initial list:", objects_to_str(available_towers))
+    if wall in available_towers: available_towers.remove(wall)
+    print("Get preferences (initial list):", objects_to_str(available_towers))
+
+    preferences = []
     if len(available_towers) == 0: return preferences
     count = 0
     while count < 5:
         preference = available_towers[0]
         preferences.append(preference)
-        print("Round", count, "Available towers:", objects_to_str(available_towers))
-        print("Round", count, "Preferences:", objects_to_str(preferences))
+        # print("Round", count, "Available towers:", objects_to_str(available_towers))
+        # print("Round", count, "Preferences:", objects_to_str(preferences))
         available_towers = [x for x in available_towers if x.resource != preference.resource]
         if len(available_towers) == 0:
-            for pref in preferences:
-                print(pref, preference.priority)
+            print("Get preferences (preferences):", objects_to_str(preferences))
             return preferences
         count += 1
-        print("Get preferences:", preferences, count)
-        print(objects_to_str(available_towers))
-        print(objects_to_str(preferences))
     return preferences
 
 def remove_tree(r, village):
@@ -323,6 +300,10 @@ def upgrade():
     if len(rects) == 0:
         rects = find_many("upgrade_2", confidence=0.75)
         print("Upgrade - upgrade2 (second attempt) buttons found:", len(rects))
+    if len(rects) == 0:
+        rects = find_many("upgrade_3", confidence=0.75)
+        print("Upgrade - upgrade3 (third attempt) buttons found:", len(rects))
+
     sufficient_funds = False
     print(rects)
     for rect in rects:
@@ -376,63 +357,25 @@ def has_cash(region):
     # Warden: Counter({(128, 128, 128): 3475, (0, 128, 128): 949, (0, 0, 0): 814, (0, 128, 0): 159, (0, 0, 128): 3})
     # Mortar: Counter({(128, 128, 128): 4093, (0, 0, 0): 924, (0, 128, 128): 131, (0, 128, 0): 52})
     # Wall (inadequate cash): Counter({(128, 128, 128): 3818, (0, 0, 0): 668, (0, 128, 128): 416, (0, 0, 128): 298})
+    # Queen (adequate cash): Counter({(128, 128, 128): 3495, (0, 0, 0): 910, (0, 128, 128): 576, (0, 0, 128): 185, (0, 128, 0): 30, (128, 0, 128): 4})
     pag.screenshot('temp/upgrade_colour.png', region=region)
     image = cv2.imread('temp/upgrade_colour.png', 1)
     # show(image)
     new, counter = simplify(image, gradients=2)
+    print(counter)
     if counter[(128,128,0)] > 4000: return False  # This is the wall rings
     if counter[(0, 128, 128)] < 400: return True
     if counter[(0, 128, 0)] > 100 and counter[(0, 128, 128)] < 1000: return True # This is the warden
+    if counter[(0, 0, 0)] > 800 and counter[(0, 128, 128)] < 600: return True # This is the queen
     return False
 
 def has_cash_2(image):
     image = image[:, 0:400]
+    # show(image)
     new, counter = simplify(image, gradients=2)
+
+    print(counter)
     return counter[(0, 128, 128)] < 400
-
-def combine_image_horizontal(images):
-    max_height = 0
-    for image in images:
-        if image is None: continue
-        height, width, channels = image.shape
-        max_height = max(max_height, height)
-
-    line = np.zeros((max_height, 3, 3), np.uint8)
-    line.fill(255)
-    combined = np.zeros((max_height, 1, 3), np.uint8)
-
-    for image in images:
-        if image is None: continue
-        height, width, channels = image.shape
-        if height < max_height:
-            buffer = np.zeros((max_height - height, width, 3), np.uint8)
-            image = np.concatenate((image, buffer), axis=0)
-        combined = np.concatenate((combined, line, image), axis=1)
-    combined = np.concatenate((combined, line), axis=1)
-
-    # show(combined)
-    return combined[:, 1:]
-
-def combine_image_vertical(images):
-    max_width = 0
-    for image in images:
-        height, width, channels = image.shape
-        max_width = max(max_width, width)
-
-    line = np.zeros((3, max_width, 3), np.uint8)
-    line.fill(255)
-    combined = np.zeros((1, max_width, 3), np.uint8)
-
-    for image in images:
-        height, width, channels = image.shape
-        if width < max_width:
-            buffer = np.zeros((height, max_width - width, 3), np.uint8)
-            image = np.concatenate((image, buffer), axis=1)
-        combined = np.concatenate((combined, line, image), axis=0)
-    combined = np.concatenate((combined, line), axis=0)
-
-    # show(combined)
-    return combined[1:, :]
 
 def create_combined_builders_image(accounts):
     account_images = []
@@ -461,6 +404,7 @@ def create_combined_builders_image(accounts):
     x = datetime.now().strftime("%I:%M") + datetime.now().strftime("%p").lower()
     cv2.putText(header, x, (10, 35), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2, cv2.LINE_AA)
     war_banner = cv2.imread(f'temp/tracker/war_banner.png', 1)
+    war_banner = cv2.resize(war_banner, (0, 0), fx=.65, fy=.65)
     header = combine_image_horizontal([header, war_banner])
 
     images = [header] + account_images
@@ -470,8 +414,6 @@ def create_combined_builders_image(accounts):
 
 def get_next_completion(account, village):
     print("Get next completion")
-    if village == "main": goto(main)
-    else: goto(builder)
     if spare_builders(account, village) > 0: return
     goto_list_very_top(village)
     if i_upgrades_in_progress.find():
@@ -498,9 +440,14 @@ def check_completion(account):
     elif previous_completion == next_completion: result = "No change"
     elif previous_completion != next_completion:
         result = f"Completed: {previous_completion[0]} level: {previous_completion[1]}"
-        excel_write(account.number, "completion", previous_completion)
-        progress(account, previous_completion)
+        # excel_write(account.number, "completion", previous_completion)
+        # progress(account, previous_completion)
     print("Check completion", previous_completion, next_completion, result)
 
-
-
+def get_castle_resources():
+    global current_location
+    goto(l_castle)
+    for i in [i_treasury, i_collect_castle, i_okay3]:
+        time.sleep(0.2)
+        i.click()
+    current_location = main

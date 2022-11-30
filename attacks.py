@@ -48,7 +48,7 @@ BARB80 = {
             "th_gold_adj": True,
         }
 
-GIANT110 = {
+GIANT200 = {
             "name": "giant200",
             "max_th": 7,
             "wizard_check": True,
@@ -56,7 +56,7 @@ GIANT110 = {
             "bomb": True,
             "bomb_target": WIZARDS,
             "bomb_target2": None,
-            "lightening": 6,
+            "lightening": 7,
             "initial_troops": [giant, giant, wizard, king],
             "troop_group": [(giant, 3), (bomber, 1), (wizard, 2), ],
             "spells": [],
@@ -68,21 +68,20 @@ GIANT110 = {
             "th_gold_adj": True,
         }
 
-
-GIANT200 = {
+GIANT200_GAMES = {
             "name": "giant200",
-            "resource_objective": [00000,0,2000],
-            "max_th": 8,
+            "max_th": 7,
             "wizard_check": True,
             "towers_to_avoid": INFERNO_HIGH,
             "bomb": True,
             "bomb_target": WIZARDS,
             "bomb_target2": None,
             "lightening": 7,
-            "initial_troops": ["king", "queen", "clan",],
-            "troop_group": [("giant", 5), ("bomb", 2), ("wizard", 5), ],
-            "troop_groups": 4,
-            "final_troops": ["wizard",],
+            "initial_troops": [king, giant, giant, giant, giant],
+            "troop_group": [(giant, 3), (bomber, 1), (wizard, 2), ],
+            "spells": [],
+            "troop_groups": 6,
+            "final_troops": [],
             "troop_pause": 0,
             "drop_points": False,
             "drop_point_troops": ["super_goblin,"],
@@ -124,9 +123,30 @@ GIANT240 = {
             "lightening": 11,
             "spells": [],
             "initial_troops": [king, log_thrower, queen, warden],
-            "troop_group": [(giant, 6), (bomber, 2), (wizard, 6), ],
-            "troop_groups": 4,
-            "final_troops": [wizard, wizard, ],
+            "troop_group": [(giant, 3), (bomber, 1), (wizard, 2), ],
+            "troop_groups": 9,
+            "final_troops": [wizard, wizard, wizard, goblin, goblin, goblin],
+            "troop_pause": 0,
+            "drop_points": False,
+            "drop_point_troops": [],
+            "th_gold_adj": False,
+        }
+
+GIANT240_GAMES = {
+            "name": "giant240",
+            "resource_objective": [400000,0,2000],
+            "max_th": 9,
+            "wizard_check": False,
+            "towers_to_avoid": INFERNO_HIGH,
+            "bomb": True,
+            "bomb_target": WIZARDS,
+            "bomb_target2": None,
+            "lightening": 11,
+            "spells": [],
+            "initial_troops": [king, log_thrower, queen, warden],
+            "troop_group": [(giant, 3), (bomber, 1), (wizard, 2), ],
+            "troop_groups": 8,
+            "final_troops": [wizard, wizard, goblin, goblin],
             "troop_pause": 0,
             "drop_points": False,
             "drop_point_troops": [],
@@ -217,7 +237,7 @@ GOLEMS_13 = {
         }
 
 
-BARBS_11 = {
+BARBS_52 = {
             "name": "barbs",
             # "resource_objective": [500000,0,0],
             "resource_objective": [400000,0,3000],
@@ -239,7 +259,31 @@ BARBS_11 = {
             "th_gold_adj": False,
         }
 
-BARBS_13 = {
+BARBS_52_GAMES = {
+            "name": "barbs",
+            # "resource_objective": [500000,0,0],
+            "resource_objective": [400000,0,3000],
+            "max_th": 11,
+            "wizard_check": False,
+            "towers_to_avoid": INFERNO_HIGH,
+            "bomb": False,
+            "bomb_target": INFERNOS,
+            "bomb_target2": WIZARDS,
+            "lightening": 11,
+            "spells": [],
+            "initial_troops": [king, log_thrower, queen, warden, champ],
+            "troop_group": [(super_barb, 46), ],
+            "troop_groups": 1,
+            "final_troops": [],
+            "troop_pause": 0.45,
+            "drop_points": False,
+            "drop_point_troops": [],
+            "th_gold_adj": False,
+        }
+
+
+
+BARBS_60 = {
             "name": "barbs",
             "resource_objective": [300000,0,5000],
             # "resource_objective": [0,0,5000],
@@ -253,6 +297,28 @@ BARBS_13 = {
             "spells": [],
             "initial_troops": [king, log_thrower, queen, warden, champ],
             "troop_group": [(super_barb, 60), ],
+            "troop_groups": 1,
+            "final_troops": [],
+            "troop_pause": 0.45,
+            "drop_points": False,
+            "drop_point_troops": [],
+            "th_gold_adj": False,
+        }
+
+BARBS_60_GAMES = {
+            "name": "barbs",
+            "resource_objective": [300000,0,5000],
+            # "resource_objective": [0,0,5000],
+            "max_th": 13,
+            "wizard_check": False,
+            "towers_to_avoid": INFERNO_HIGH,
+            "bomb": True,
+            "bomb_target": INFERNOS,
+            "bomb_target2": WIZARDS,
+            "lightening": 11,
+            "spells": [],
+            "initial_troops": [king, log_thrower, queen, warden, champ],
+            "troop_group": [(super_barb, 54), ],
             "troop_groups": 1,
             "final_troops": [],
             "troop_pause": 0.45,

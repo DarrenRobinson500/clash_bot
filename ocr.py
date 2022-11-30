@@ -415,7 +415,7 @@ def text_to_time_2(string):
     elif seconds_x != -1:
         seconds = string[0:seconds_x-1]
     else:
-        return
+        return datetime.now() + timedelta(minutes=10)
 
     try:
         days = int(days)

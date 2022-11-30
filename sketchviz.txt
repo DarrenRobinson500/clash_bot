@@ -12,12 +12,16 @@ digraph G {
     {ocr, images, regions} -> nav
     ocr -> sql
     {member, nav} -> troops
-    troops -> attacks
-    {attacks} -> account
-    {attacks, sql} -> donate
     tower -> towers_load
+    troops -> attacks
+    {attacks, sql} -> account
+    {attacks, sql} -> donate
     {nav, towers_load, sql, tracker} -> build
-    {donate, build, account} -> bot
-    bot -> {war, run}
+    {account, lose_trophies, donate} -> attack_logic
+    troops -> research
+    {attack_logic} -> games
+    {attack_logic} -> war
+    {build, war, research, games} -> bot
+    {bot, games} -> run
 }
 

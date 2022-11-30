@@ -1,4 +1,5 @@
 import openpyxl as xl
+from sql import *
 
 tower_cells = []
 level_cells = []
@@ -122,24 +123,38 @@ def excel_clear():
     for x in range(1,5):
         excel_write(x, "next_completion", ("", ""))
 
-# excel_clear()
 
-# excel_write(1,"next_completion", ("cannon", 6))
-# excel_write(2,"next_completion", ("bomb", 6))
-# excel_write(3,"next_completion", ("giant bomb", 8))
-# excel_write(4,"next_completion", ("tesla", 12))
+def excel_write_next():
+    # Open spreadsheet
+    file = 'C:/Users/darre/OneDrive/Darren/clash_bot/tracker/tracker.xlsx'
+    wb = xl.load_workbook(file)
+    sheet = wb["Next"]
+
+    # Loop through actions
+    output = db_get(job='all')
+    for account_no, job, time in output:
+        # print("Row:", account_no, job, time)
+        row = account_no + 3
+        for job_type, column in [("attack", 2), ("donate", 3), ("build", 4), ("research", 5), ("coin", 6)]:
+
+            if job == job_type:
+                # time_due = string_to_time(time_due)
+                # time_due = time_to_string(time_due)
+                sheet.cell(row, column).value = time
+                print("Account:", account_no, " Job:", job, "Time:", time)
+    wb.save(file)
+    wb.close()
 
 
 
-get_cells()
-# print(tower_cells)
-# print(level_cells)
-# print("PRE")
-# find_all_values()
-# print()
-# progress("Archer Tower", 17)
-# print("POST")
-# find_all_values()
+    # tower, level = tower_level
+    # sheet = wb[str(account.number)]
+    # row = next((x[1] for x in tower_cells if x[0] == tower), None)
+    # column = next((x[1] for x in level_cells if x[0] == level), None)
+    # print(tower_cells)
+    # print(level_cells)
+    # print("Excel write tracker:", tower, row, column)
+    # print("Value", sheet.cell(row, column).value)
+    # sheet.cell(row, column).value = value
 
-
-# def decrease_value(tower, level)
+excel_write_next()

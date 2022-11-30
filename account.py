@@ -1,5 +1,7 @@
 from attacks import *
 from sql import *
+from sql_games import *
+# from games import *
 
 accounts = []
 
@@ -14,27 +16,27 @@ def extend_string(string, length):
     return string
 
 class Account():
-    def __init__(self, number, th, has_siege, building, building_b, needs_walls, barracks, total_gold, total_elixir,
-                 total_dark, army_troops, war_troops, army_troops_b, max_trophies, required_currency):
-        self.number = number
-        self.th = th
-        self.has_siege = has_siege
-        self.building = building
-        self.building_b = building_b
-        self.needs_walls = needs_walls
-        self.barracks = barracks
-        self.max_trophies = max_trophies
+    def __init__(self, data):
+        self.number = data['number']
+        self.th = data['th']
+        self.has_siege = data['has_siege']
+        self.building = data['building']
+        self.building_b = data['building_b']
+        trophies = [0, 100, 200, 300, 400, 500, 600, 700, 1000, 1200, 1400, 1600, 1800, 2000]
+        self.max_trophies = trophies[self.th]
         self.gold = None
         self.elixir = None
         self.dark = None
-        self.total_gold = total_gold
-        self.total_elixir = total_elixir
-        self.total_dark = total_dark
-        self.required_currency = required_currency
-        self.army_troops = army_troops
-        self.war_troops = war_troops
-        self.army_troops_b = army_troops_b
+        self.total_gold = data['total_gold']
+        self.total_elixir = data['total_elixir']
+        self.total_dark = data['total_dark']
+        self.required_currency = data['required_currency']
+        self.army_troops = data['army_troops']
+        self.war_troops = data['war_troops']
+        self.games_troops = data['games_troops']
+        self.army_troops_b = data['army_troops_b']
         self.attacking = True
+        self.researching = True
         self.next_build = None
         self.next_build_b = None
         self.next_research = None
@@ -43,10 +45,15 @@ class Account():
         self.use_suggestion_b = False
         self.clan_troops = None
         self.clan_troops_war = None
+        self.current_game = None
+        self.playing_games = True
         accounts.append(self)
 
     def __str__(self):
         return f"Account: {self.number}"
+
+    # def start_game(self):
+
 
     def next_update(self):
         if spare_builders(self, "main") > 0:
@@ -73,7 +80,7 @@ class Account():
         if self.building_b:
             self.next_build_b = text_to_time_2(result)
         else:
-            self.next_build_b = datetime.now()
+            self.next_build_b = datetime.now() + timedelta(hours=1)
         pag.click(BOTTOM_LEFT)
 
     def update_build_time(self):
@@ -84,14 +91,19 @@ class Account():
         time.sleep(0.2)
         result = build_time.read(BUILDER_LIST_TIMES)
         result = text_to_time_2(result)
+        if result:
+            result += timedelta(minutes=2)
+        else:
+            result = datetime.now() + timedelta(minutes=10)
         self.next_build = result
         db_update(self, "build", result)
 
     def update_lab_time(self):
+        if not self.researching: return
         goto(lab)
         get_screenshot(RESEARCH_TIME, filename=f"tracker/research_time{self.number}main")
         result = research_time.read(RESEARCH_TIME)
-        result = text_to_time_2(result)
+        result = text_to_time_2(result) + timedelta(minutes=1)
         self.next_research = result
         db_update(self, "research", result)
         print("Next research:", result)
@@ -222,15 +234,99 @@ def change_accounts_fast(account):
     print("New account:", account)
     current_account = account
 
-account_data = [
-    (0, 13, True, True, False, False, 4, 18000000, 18000000, 300000, BARBS_13, DRAGONS_300, troops1, 0, "gold"),
-    (1, 13, True, True, False, False, 4, 18000000, 18000000, 300000, BARBS_13, DRAGONS_300, troops1, 2000, "gold"),
-    (2, 11, False, True, True, False, 4, 10000000, 10000000, 200000, BARBS_11, DRAGONS_260, troops2, 1500, "gold"),
-    (3, 10, False, True, False, False, 4, 8500000, 8500000, 200000, GIANT240, DRAGONS_240, troops2, 1300, "gold"),
-    (4, 7, False, True, False, True, 4, 4000000, 10000, 0, GIANT110, DRAGONS_240, troops3, 750, "gold"),
-]
-for number, th, has_siege, building, building_b, needs_walls, barracks, gold, elixir, dark, army_troops, war_troops, army_troops_b, max_trophies, required_currency in account_data:
-    Account(number, th, has_siege, building, building_b, needs_walls, barracks, gold, elixir, dark, army_troops, war_troops, army_troops_b, max_trophies, required_currency)
+# account_data = [
+#     (0, 13, True, True, False, False, 4, 18000000, 18000000, 300000, BARBS_60, DRAGONS_300, troops1, 0, "gold"),
+#     (1, 13, True, True, False, False, 4, 18000000, 18000000, 300000, BARBS_60, DRAGONS_300, troops1, 2000, "gold"),
+#     (2, 11, False, True, True, False, 4, 10000000, 10000000, 200000, BARBS_52, DRAGONS_260, troops2, 1500, "gold"),
+#     (3, 10, False, True, False, False, 4, 8500000, 8500000, 200000, GIANT240, DRAGONS_240, troops2, 1300, "gold"),
+#     (4, 7, False, True, False, True, 4, 4000000, 10000, 0, GIANT200, DRAGONS_240, troops3, 750, "gold"),
+# ]
+#
+account_data_0 = {
+    'number': 0,
+    'th': 0,
+    'has_siege': False,
+    'building': False,
+    'building_b': False,
+    'total_gold': 0,
+    'total_elixir': 0,
+    'total_dark': 0,
+    'army_troops': None,
+    'war_troops': None,
+    'games_troops': None,
+    'army_troops_b': None,
+    'required_currency': None,
+}
+
+account_data_1 = {
+    'number': 1,
+    'th': 13,
+    'has_siege': True,
+    'building': True,
+    'building_b': False,
+    'total_gold': 18000000,
+    'total_elixir': 18000000,
+    'total_dark': 300000,
+    'army_troops': BARBS_60,
+    'war_troops': DRAGONS_300,
+    'games_troops': BARBS_60_GAMES,
+    'army_troops_b': troops1,
+    'required_currency': "gold",
+}
+
+account_data_2 = {
+    'number': 2,
+    'th': 12,
+    'has_siege': False,
+    'building': True,
+    'building_b': True,
+    'total_gold': 10000000,
+    'total_elixir': 10000000,
+    'total_dark': 240000,
+    'army_troops': BARBS_52,
+    'war_troops': DRAGONS_260,
+    'games_troops': BARBS_52_GAMES,
+    'army_troops_b': troops2,
+    'required_currency': "gold",
+}
+
+account_data_3 = {
+    'number': 3,
+    'th': 11,
+    'has_siege': False,
+    'building': True,
+    'building_b': False,
+    'total_gold': 8500000,
+    'total_elixir': 8500000,
+    'total_dark': 200000,
+    'army_troops': GIANT240,
+    'war_troops': DRAGONS_260,
+    'games_troops': GIANT240_GAMES,
+    'army_troops_b': troops2,
+    'required_currency': "gold",
+}
+
+account_data_4 = {
+    'number': 4,
+    'th': 8,
+    'has_siege': False,
+    'building': True,
+    'building_b': False,
+    'total_gold': 6000000,
+    'total_elixir': 6000000,
+    'total_dark': 80000,
+    'army_troops': GIANT200,
+    'war_troops': DRAGONS_240,
+    'games_troops': GIANT200_GAMES,
+    'army_troops_b': troops3,
+    'required_currency': "gold",
+}
+
+for data in [account_data_0, account_data_1, account_data_2, account_data_3, account_data_4]:
+    Account(data)
+
+def return_account(number):
+    return next((x for x in accounts if x.number == number), None)
 
 account_0 = next((x for x in accounts if x.number == 0), None)
 account_1 = next((x for x in accounts if x.number == 1), None)
@@ -245,7 +341,7 @@ account_1.clan_troops_war = [dragon, dragon, bloon]
 account_2.clan_troops = [super_barb] * 7
 account_2.clan_troops_war = [dragon, bloon, bloon, bloon]
 
-
-
 current_account = None
+
+
 

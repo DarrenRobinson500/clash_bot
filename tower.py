@@ -23,7 +23,7 @@ class Tower():
         self.category = category
         self.resource = resource
         self.priority = priority
-        self.i_text = get_image_from_file(name, village, "text")
+        self.i_text = get_image_from_file(name, village, "")
         self.levels = []
         towers.append(self)
 
@@ -35,13 +35,26 @@ class Tower():
         for x in self.levels:
             print(" -", x)
 
-    def add_level(self, tower, level, th, gold, elixir, dark, days):
-        self.Level(tower=tower, level=level, th=th, gold=gold, elixir=elixir, dark=dark, days=days)
+    def add_level(self, tower, number, th, gold, elixir, dark, days):
+        self.Level(tower=tower, number=number, th=th, gold=gold, elixir=elixir, dark=dark, days=days)
+
+    def return_level(self, number):
+        for level in self.levels:
+            if level.number == number: return level
+
+    def remaining_time(self, current_level, th):
+        time_left = timedelta(days=0)
+        for level in self.levels:
+            # print(level.th, th, level.number, current_level)
+            if level.th <= th and level.number > current_level:
+                # print("Adding:", level.days)
+                time_left += level.days
+        return time_left
 
     class Level():
-        def __init__(self, tower, level, th, gold, elixir, dark, days):
+        def __init__(self, tower, number, th, gold, elixir, dark, days):
             self.tower = tower
-            self.level = level
+            self.number = number
             self.th = th
             self.gold = gold
             self.elixir = elixir
@@ -50,5 +63,5 @@ class Tower():
             tower.levels.append(self)
 
         def __str__(self):
-            return f"Level: {self.level}. Time: {self.days}"
+            return f"Level: {self.number}. Time: {self.days}"
 

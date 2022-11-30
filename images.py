@@ -162,7 +162,7 @@ class Image():
                 self.save_region(region)
         return round(val,2), loc, rect
 
-    def find_screen(self, screen, show_image=False, return_location=False):
+    def find_screen(self, screen, show_image=False, return_location=False, return_result=False):
         if self.image is None:
             print("Find - No image provided:", self.name)
             return False, (0, 0)
@@ -172,6 +172,7 @@ class Image():
         result = cv2.matchTemplate(screen, self.image, method)
         min_val, val, min_loc, loc = cv2.minMaxLoc(result)
         # print("Find screen:", self.name, round(val, 2), self.threshold)
+        if return_result: return val > self.threshold, round(val,2)
         if return_location: return val > self.threshold, loc
         return val > self.threshold
 
@@ -378,6 +379,7 @@ i_spells_tab = Image(name="i_spells_tab", file='images/nav/spells_tab.png')
 i_spells_tab_dark = Image(name="i_spells_tab_dark", file='images/nav/spells_tab_dark.png')
 i_splash = Image(name="i_splash", file='images/nav/splash.png')
 i_start_eyes = Image(name="i_start_eyes", file='images/nav/start_eyes.png')
+i_start_eyes_2 = Image(name="i_start_eyes_2", file='images/nav/start_eyes_2.png')
 i_surrender = Image(name="i_surrender", file='images/nav/surrender.png')
 i_surrender_okay = Image(name="i_surrender_okay", file='images/nav/surrender_okay.png')
 i_switch_account = Image(name="i_switch_account", file='images/nav/switch_account.png')
@@ -385,7 +387,7 @@ i_troops_tab = Image(name="i_troops_tab", file='images/nav/troops_tab.png')
 i_troops_tab_dark = Image(name="i_troops_tab_dark", file='images/nav/troops_tab_dark.png')
 i_try_again = Image(name="i_try_again", file='images/nav/try_again.png')
 i_versus_battle = Image(name="i_versus_battle", file='images/nav/versus_battle.png')
-i_war_okay = Image(name="i_war_okay", file='images/nav/war_okay.png')
+i_war_okay = Image(name="i_war_okay", file='images/war/okay.png')
 i_wins = Image(name="i_wins", file='images/nav/wins.png')
 i_x = Image(name="i_unknown", file='images/nav/x.png')
 
@@ -398,22 +400,36 @@ i_raid_medals = Image(name="i_raid_medals", file='images/nav/raid_medals.png', t
 i_raid_medals_selected = Image(name="i_raid_medals_selected", file='images/nav/raid_medals_selected.png', threshold=0.95)
 i_collect_capital_coin = Image(name="i_collect_capital_coin", file='images/collect_capital_coin.png')
 
+# Castle
+i_treasury = Image(name="i_treasury", file='images/treasury.png')
+i_collect_castle = Image(name="i_collect_castle", file='images/collect_castle.png')
+
+# Games
+i_caravan = Image(name="i_caravan", file='images/nav/caravan.png')
+i_games = Image(name="i_games", file='images/nav/games.png')
+
 # Research
 i_research = Image(name="i_research", file='images/research/research.png')
 i_research_upgrading = Image(name="i_research", file='images/research/research_upgrading.png')
 i_research_elixir = Image(name="i_research_elixir", file='images/research/research_elixir.png')
-i_research_dark = Image(name="i_research_dark", file='images/research/research_dark.png')
+i_lab_girl = Image(name="lab_girl", file="images/nav/lab_girl.png")
+# i_research_dark = Image(name="i_research_dark", file='images/research/research_dark.png')
+
+# Games
+i_start_game = Image(name="i_start_game", file='images/games/start_game.png')
+i_complete = Image(name="i_complete", file="images/games/complete.png", threshold=0.93)
 
 # War
 i_war = Image(name="i_war", file='images/nav/war.png')
 i_war_cwl = Image(name="i_war_cwl", file='images/nav/war_cwl.png')
-i_war_preparation = Image(name="i_war_preparation", file='images/nav/war_preparation.png')
-i_war_castle = Image(name="i_war_castle", file='images/nav/war_castle.png', threshold=0.7)
-i_war_castle2 = Image(name="i_war_castle2", file='images/nav/war_castle2.png', threshold=0.7)
-i_war_left = Image(name="i_war_left", file='images/nav/war_left.png', threshold=0.7, region_limit=[470, 750, 100, 140])
-i_war_right = Image(name="i_war_right", file='images/nav/war_right.png')
-i_war_donate = Image(name="i_war_donate", file='images/nav/war_donate.png')
-i_war_donate_reinforcements = Image(name="i_war_donate_reinforcements", file='images/nav/war_donate_reinforcements.png', threshold=0.7)
+i_war_preparation = Image(name="i_war_preparation", file='images/war/preparation.png')
+i_war_battle_day = Image(name="i_battle_day", file='images/war/battle_day.png')
+i_war_castle = Image(name="i_war_castle", file='images/war/castle.png', threshold=0.7)
+i_war_castle2 = Image(name="i_war_castle2", file='images/war/castle2.png', threshold=0.7)
+i_war_left = Image(name="i_war_left", file='images/war/left.png', threshold=0.7, region_limit=[470, 750, 100, 140])
+i_war_right = Image(name="i_war_right", file='images/war/right.png')
+i_war_donate = Image(name="i_war_donate", file='images/war/donate.png')
+i_war_donate_reinforcements = Image(name="i_war_donate_reinforcements", file='images/war/donate_reinforcements.png', threshold=0.7)
 i_clan_army = Image(name="i_clan_army", file="images/troops_new/clan_army.png")
 
 # Donate images
@@ -447,7 +463,7 @@ for x in RESOURCE_TEMPLATES:
     new = Image(name=x, file= "images/resources/" + x + ".png")
     resource_templates.append(new)
 
-# Tower images
+# Labs
 dir = "towers/labs/"
 files = dir_to_list(dir)
 labs = []
@@ -455,8 +471,16 @@ for file in files:
     new = Image(name=file, file='images/' + file + ".png", threshold=0.7)
     labs.append(new)
 
+# Castles
+dir = "towers/castles/"
+files = dir_to_list(dir)
+castles = []
+for file in files:
+    new = Image(name=file, file='images/' + file + ".png", threshold=0.7)
+    castles.append(new)
+
 # Building
-i_wall_text = Image(name="i_wall_text", file="images/towers/wall_text.png")
+i_wall_text = Image(name="i_wall_text", file="images/towers/wall.png")
 
 # Attacking
 # i_next_attack = Image(name="i_next_attack", file=)
@@ -478,10 +502,62 @@ def merge_regions():
     return count
 
 # i_log_thrower_donate2 = next((x for x in images if x.name == 'log_thrower'), None)
-i_log_thrower_donate2 = Image(name="i_log_thrower_donate2", file="images/troops_new/log_thrower_donate2.png")
-i_log_thrower_donate2.show_regions()
+# i_log_thrower_donate2 = Image(name="i_log_thrower_donate2", file="images/troops_new/log_thrower_donate2.png")
+# i_log_thrower_donate2.show_regions()
 
 # print(i_log_thrower_donate2.regions, len(i_log_thrower_donate2.regions))
 # i_log_thrower_donate2.merge_regions()
 
 merge_regions()
+
+
+def merge_regions_sql(image):
+    # print("Merge regions")
+    self.load_regions()
+    if len(self.regions) == 0: return
+    min_increase = None
+    min_region_a = None
+    min_region_b = None
+    min_region_c = None
+    total_area = 0
+    for region_a in self.regions:
+        total_area += region_a[2] * region_a[3]
+    print(f"{self} Total area: {total_area}. Regions: {len(self.regions)}")
+
+    for region_a in self.regions:
+        for region_b in self.regions:
+            if region_a == region_b: continue
+            if region_a[0] == region_b[0] and region_a[1] == region_b[1] and region_a[2] == region_b[2] and region_a[
+                3] == region_b[3]:
+                print("Found Duplicate")
+                db_regions_delete(self, min_region_b)
+                self.load_regions()
+                continue
+            size_a = region_a[2] * region_a[3]
+            size_b = region_b[2] * region_b[3]
+            combined_x1 = min(region_a[0], region_b[0])
+            combined_x2 = max(region_a[0] + region_a[2], region_b[0] + region_b[2])
+            combined_w = combined_x2 - combined_x1
+            combined_y1 = min(region_a[1], region_b[1])
+            combined_y2 = max(region_a[1] + region_a[3], region_b[1] + region_b[3])
+            combined_h = combined_y2 - combined_y1
+            size_c = combined_w * combined_h
+            increase = size_c - size_a - size_b
+            if min_increase is None or increase < min_increase:
+                min_increase = increase
+                min_region_a = region_a
+                min_region_b = region_b
+                min_region_c = [combined_x1, combined_y1, combined_w, combined_h]
+    # print(min_increase, min_region_a, min_region_b, min_region_c)
+    if len(self.regions) <= self.no_of_regions and min_increase and min_increase > 0:
+        # print("Merge regions", len(self.regions), self.no_of_regions, min_increase)
+        return False
+    if min_region_a is None or min_region_b is None:
+        # print("Merge regions - found None region")
+        return False
+    # print("Merge regions - got here")
+    print("Merging regions. Net increase:", min_increase)
+    db_regions_delete(self, min_region_a, type=self.type)
+    db_regions_delete(self, min_region_b, type=self.type)
+    self.save_region(min_region_c)
+    return True

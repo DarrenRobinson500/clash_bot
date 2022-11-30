@@ -131,17 +131,6 @@ def queue_up_donations(account, extra_troops=None):
     print("Queue up donations:", troop_str(troops_to_queue))
     army_prep(account, troops_to_queue, army_or_total="total")
 
-def get_time_attack():
-    # print("Get time until attack is ready")
-    goto(army_tab)
-    result = time_to_army_ready()
-
-    if result:
-        result = datetime.now() + max(timedelta(minutes=result), timedelta(minutes=2))
-    else:
-        result = datetime.now() + timedelta(minutes=20)
-    return result
-
 def print_total_donations():
     print("\nTOTAL DONATIONS")
     for troop in troops:
@@ -164,7 +153,7 @@ def donate_basic():
                 if x == super_barb: show_image = False
                 print(x)
                 val, loc, rect = find(x.i_donate2.image, screen, x.name, show_image=show_image)
-                print("Donate:", x.name, round(val,2), datetime.now() - start_time)
+                print("Donate basic:", x.name, round(val,2), datetime.now() - start_time)
                 if val > 0.65:
                     count = 0
                     screen = get_screenshot(DONATE_AREA, colour=1)
