@@ -12,6 +12,7 @@ def create_double_screen(account):
     # find TH for alignment
     val, rect1 = find_tower(img0, TH)
     val, rect2 = find_tower(img2, TH)
+    print("Create double screen", rect1, rect2)
     y_adj = rect1[1] - rect2[1]
     y2_start = y1_end - y_adj
 
@@ -25,6 +26,9 @@ def create_double_screen(account):
     x = f'images/attacks{account}/attack {post}.png'
     cv2.imwrite(x, img)
     return img
+
+create_double_screen(1)
+
 
 def get_double_screen():
     for _ in range(2): pag.scroll(300)
@@ -48,16 +52,3 @@ def get_double_screen_full():
 # get_double_screen_full()
 # create_double_screen(account)
 
-start()
-goto(find_a_match)
-
-img1 = cv2.imread('temp/attacking.png', 1)
-result = ram_drop_point(img1)
-print(result)
-goto(main)
-end()
-time.sleep(1.3)
-click_cv2('image')
-img = cv2.imread('temp/attack.png', 1)
-
-show(img)

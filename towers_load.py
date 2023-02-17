@@ -15,7 +15,7 @@ def load_towers():
         priority = sheet.cell(row, 5).value
         if priority is None: priority = 0
 
-        print("Creating tower:", name)
+        # print("Creating tower:", name)
         Tower(name=name, village=village, category=category, resource=resource, priority=priority)
 
     print()
@@ -61,6 +61,14 @@ mortar = return_tower("mortar")
 wall = return_tower("wall")
 camp = return_tower("camp")
 spring_trap = return_tower("spring_trap")
+
+lab = return_tower("lab")
+wizard_tower = return_tower("wizard_tower")
+air_defence = return_tower("air_defence")
+inferno = return_tower("air_defence")
+
+for tower in [lab, wizard_tower, air_defence, inferno]:
+    tower.get_images()
 
 # print(cannon.remaining_time(1, 5))
 

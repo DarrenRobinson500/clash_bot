@@ -35,7 +35,7 @@ def number(str):
         return 0
 
 def read_num(region, colour=WHITE, scale=1, confidence=0.75):
-    print("Read num - temp2")
+    # print("Read num - temp2")
     pag.screenshot('temp/temp2.png', region=region)
     i = cv2.imread(f"temp/temp2.png", 1)
     i = cv2.resize(i, (0,0), fx=scale, fy=scale)
@@ -133,7 +133,7 @@ def read_cost(i):
     found.sort(key=lambda tup: tup[1])
     for y in found:
         result += y[0]
-    print("Read cost:", found, "=>", result)
+    # print("Read cost:", found, "=>", result)
     return result
 
 def read_resources(i):
@@ -174,7 +174,7 @@ def read_build_time(i):
     for y in found:
         result += y[0]
     result = result.replace("hh", "h")
-    print("Read build time:", found, "=>", result)
+    # print("Read build time:", found, "=>", result)
     return result
 
 
@@ -210,21 +210,25 @@ def read_build_time(i):
 def available_resources():
     wait_cv2("end_battle")
     time.sleep(1)
-    gold, elixir, dark = 0,0,0
-    result = []
 
-    for name, region in [(gold, AVAILABLE_GOLD), (elixir, AVAILABLE_ELIXIR), (dark, AVAILABLE_DARK)]:
-        pag.screenshot(f'temp/available_{name}.png', region=region)
-        i = cv2.imread(f"temp/available_{name}.png", 0)
-        result_ind = read_resources(i)
-        try:
-            result_ind = int(result_ind)
-        except:
-            result_ind = 0
-        result.append(result_ind)
+    screen = get_screenshot(AVAILABLE_GOLD)
+    gold = available_resource_set.read_screen(screen, return_number=True, show_image=False)
+    screen = get_screenshot(AVAILABLE_DARK)
+    dark = available_resource_set.read_screen(screen, return_number=True, show_image=False)
 
-    print("Available Resources:", result)
-    return result
+
+    # for name, region in [(gold, AVAILABLE_GOLD), (elixir, AVAILABLE_ELIXIR), (dark, AVAILABLE_DARK)]:
+    #     pag.screenshot(f'temp/available_{name}.png', region=region)
+    #     i = cv2.imread(f"temp/available_{name}.png", 0)
+    #     result_ind = read_resources(i)
+    #     try:
+    #         result_ind = int(result_ind)
+    #     except:
+    #         result_ind = 0
+    #     result.append(result_ind)
+
+    # print("Available Resources:", result)
+    return [gold, 0, dark]
 
 def current_resources_b():
     time.sleep(1)
@@ -282,7 +286,7 @@ def time_to_army_ready():
 #     print("clan_troops", result)
 #     return result
 #
-def army_time():
+def army_time_old():
     result = read_army_time(ARMY_TIME, WHITE)
     try:
         if result[-1] == "s":
@@ -446,6 +450,55 @@ def text_to_time_2(string):
     # print("Finish time", finish)
 
     return finish
+
+def text_to_time_3(string):
+    days_x = string.find("d")
+    hours_x = string.find("h")
+    minutes_x = string.find("m")
+    seconds_x = string.find("s")
+    print(days_x, hours_x, minutes_x, seconds_x)
+
+    days, hours, minutes, seconds = 0,0,0,0
+    cursor = 0
+    if days_x != -1:
+        try:
+            days = int(string[cursor:days_x])
+        except:
+            pass
+        cursor = days_x + 1
+        print("Days", days)
+    if hours_x != -1:
+        try:
+            hours = int(string[cursor:hours_x])
+        except:
+            pass
+        cursor = hours_x + 1
+        print("Hours", hours)
+    if minutes_x != -1:
+        print(string[cursor:minutes_x])
+        try:
+            minutes = int(string[cursor:minutes_x])
+        except:
+            pass
+        cursor = minutes_x + 1
+        print("Minutes", minutes)
+    if seconds_x != -1:
+        print(cursor, seconds_x)
+        print(string[cursor:seconds_x])
+        try:
+            seconds = int(string[cursor:seconds_x])
+        except:
+            pass
+        print("Seconds", seconds)
+
+    print(days, hours, minutes)
+
+    if days == 0 and hours == 0 and minutes == 0 and seconds == 0: return None
+    finish = datetime.now() + timedelta(days=days) + timedelta(hours=hours) + timedelta(minutes=minutes) + timedelta(seconds=seconds)
+
+    return finish
+
+
 
 def string_to_time(time):
     try:

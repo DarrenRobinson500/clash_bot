@@ -1,5 +1,6 @@
 # from nav import *
 from troops import *
+from people import *
 
 # ========================
 # === 7. LOSE TROPHIES ===
@@ -8,7 +9,7 @@ from troops import *
 def place(troop, count_total, dp=(400,400), troop_pause=0):
     dp1 = (dp[0],min(dp[1],815))
     val, loc, rect = find(troop.i_attack.image, get_screenshot(TROOP_ZONE))
-    print("Place troops:", troop, val, loc)
+    # print("Place troops:", troop, val, loc)
     if val > 0.63:
         click(troop.i_attack.image, TROOP_ZONE)
         time.sleep(.2)
@@ -34,7 +35,7 @@ def place(troop, count_total, dp=(400,400), troop_pause=0):
 def calc_trophies():
     goto(main)
     time.sleep(1)
-    result = trophies.read(TROPHIES,return_number=True, show_image=False)
+    result = trophies.read(TROPHIES, return_number=True, show_image=False)
     return result
 
 def lose_trophies(account):
@@ -43,10 +44,12 @@ def lose_trophies(account):
     print("Lose trophies", account.number, account.max_trophies, current_trophies)
     if current_trophies > account.max_trophies:
         goto(find_a_match)
+
         hold_key("a", 0.5)
+        for _ in range(2): pag.scroll(300)
         # zoom_out()
         dp = STANDARD_DP
-        for troop in [king, queen, warden, champ, barb, giant, bomber, ]:
+        for troop in [king, queen, warden, champ, barb, giant, bomber, super_barb]:
             val, loc, rect = find(troop.i_attack.image, get_screenshot(TROOP_ZONE))
             print("Lose trophies:", troop.name, val)
             if val > 0.65:
@@ -57,6 +60,7 @@ def lose_trophies(account):
         click_cv2("surrender_okay")
         current_location = "return_home"
         goto(main)
+        invite_latest_attackee()
 
         # if troop in [barb, giant, bomb, ]:
         #     troop_delete_backlog()

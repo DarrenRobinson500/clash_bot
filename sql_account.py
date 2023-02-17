@@ -95,35 +95,35 @@ def read_tower(x, y):
     return
 
 # db_update(account=3, building="Lab", loc_x=0, loc_y=0, level=0, complete=False)
-def main():
-    start()
-    pag.screenshot(f'attacks/attack.png')
-    i = cv2.imread(f'attacks/attack.png', 0)
-    lab = find_many_img(LABS, i)
-    th = town_hall()
-    if len(lab) == 0 or th is None: return
-    th_loc = th[1]
+# def main():
+#     start()
+#     pag.screenshot(f'attacks/attack.png')
+#     i = cv2.imread(f'attacks/attack.png', 0)
+#     lab = find_many_img(LABS, i)
+#     th = town_hall()
+#     if len(lab) == 0 or th is None: return
+#     th_loc = th[1]
+#
+#     print("Lab", lab)
+#     lab_rect = lab[0]
+#     lab_loc = pag.center(lab_rect)
+#
+#     print("TH:", th_loc)
+#     print("Lab:", lab_loc)
+#     loc_x = lab_loc[0] - th_loc[0]
+#     loc_y = lab_loc[1] - th_loc[1]
+#     print("Relative loc:", loc_x, loc_y)
+#
+#     tower_stats = read_tower(loc_x, loc_y)
+#     if tower_stats:
+#         building, level = tower_stats
+#         db_update(account=3, building=building, loc_x=loc_x, loc_y=loc_y, level=level, complete=False)
+#         db_view()
+#     else:
+#         print("Couldn't read label")
+#     end()
 
-    print("Lab", lab)
-    lab_rect = lab[0]
-    lab_loc = pag.center(lab_rect)
-
-    print("TH:", th_loc)
-    print("Lab:", lab_loc)
-    loc_x = lab_loc[0] - th_loc[0]
-    loc_y = lab_loc[1] - th_loc[1]
-    print("Relative loc:", loc_x, loc_y)
-
-    tower_stats = read_tower(loc_x, loc_y)
-    if tower_stats:
-        building, level = tower_stats
-        db_update(account=3, building=building, loc_x=loc_x, loc_y=loc_y, level=level, complete=False)
-        db_view()
-    else:
-        print("Couldn't read label")
-    end()
-
-main()
+# main()
 
 # start()
 # pag.screenshot(f'attacks/attack.png')

@@ -112,7 +112,7 @@ def merge_regions(string, min_increase=None):
         print(name, x, y, w, h, w * h)
         total += w * h
         regions.append((x, y, w, h))
-    print("Total:", total, len(regions_with_name))
+    # print("Total:", total, len(regions_with_name))
 
     # # print("Merge regions")
     if len(regions) == 0: return
@@ -148,7 +148,7 @@ def merge_regions(string, min_increase=None):
     for x, y, w, h in regions:
         print(x, y, w, h, w * h)
         total += w * h
-    print("Total:", total, len(regions))
+    # print("Total:", total, len(regions))
     db(f"DELETE FROM regions WHERE object_name='{string}'")
     for x, y, w, h in regions:
         db(f"INSERT INTO regions VALUES ('{string}', '{x}', '{y}', '{w}', '{h}')")
@@ -156,5 +156,6 @@ def merge_regions(string, min_increase=None):
 
 # db(f"DELETE FROM regions WHERE object_name='donate2'")
 
+# db(f"DELETE FROM regions")
 
-merge_regions("donate2")
+# merge_regions("donate2")

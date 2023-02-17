@@ -17,13 +17,15 @@ def next_research(account):
     if account.th <= 10:
         research_preference = [giant, wizard, bomber, lightening, dragon, barb, minion, hog, archer, goblin, bloon, heal, rage]
     else:
-        research_preference = [barb, dragon, lightening, log_thrower, freeze, golem, witch, minion, clone, skeleton, lava_hound]
-    goto(lab)
+        research_preference = [barb, minion, dragon, lightening, log_thrower, freeze, golem, witch, clone, skeleton, lava_hound]
+    goto(l_lab)
     if i_research_upgrading.find():
         print("Still research")
         goto(main)
         pag.click(BOTTOM_LEFT)
         account.update_lab_time()
+        return
+    if not i_lab_girl.find():
         return
     for troop in research_preference:
         found = False
@@ -39,8 +41,6 @@ def next_research(account):
                     sleep(0.1)
                     if i_research_elixir.find():
                         i_research_elixir.click()
-                    # else:
-                    #     i_research_dark.click()
                     print("Available")
                     # pag.press("esc")
                     pag.click(BOTTOM_LEFT)

@@ -57,7 +57,7 @@ def war_donations_2():
             return
     time.sleep(2)
     if not i_war_castle.click() and not i_war_castle2.click():
-        print("Couldn't find castle")
+        # print("Couldn't find castle")
         goto(pycharm)
         return
 
@@ -97,42 +97,50 @@ def war_donations_2():
         count += 1
 
 def war_status():
-    print("War status")
     status = None
     war_banner = cv2.imread(f'temp/tracker/war_banner.png', 0)
-    if i_war_preparation.find_screen(war_banner, show_image=False): status = "Preparation"
-    if i_war_battle_day.find_screen(war_banner, show_image=False): status = "Battle Day"
-    if status == "Preparation":
-        for account in [1, 2]:
-            change_accounts(account)
-            war_donations_ad_hoc()
-        dragon.donation_count = 1
-        edrag.donation_count = 8
-        freeze.donation_count = 1
-        ice_golem.donation_count = 3
-        ice_golem.donations = 1
-    elif status == "Battle Day":
-        dragon.donation_count = 15
-        freeze.donation_count = 7
-        lightening.donation_count = 7
-        edrag.donation_count = 1
-        ice_golem.donation_count = 1
-        ice_golem.donations = 0
+    war_info = cv2.imread(f'temp/tracker/war_info.png', 0)
+    if i_war_preparation.find_screen(war_banner, show_image=False): status = "preparation"
+    if i_war_battle_day.find_screen(war_banner, show_image=False): status = "battle_day"
+    if i_season_info.find_screen(war_info, show_image=False): status = "cwl"
+    account_0.mode = status
+    print("War status:", status)
+
+    if status == "cwl":
+        for account in war_participants:
+            change_accounts_fast(account)
+            if i_attacks_available.find():
+                account.cwl_attacks_left = True
+            else:
+                account.cwl_attacks_left = False
+            print(account, "cwl_attacks_left", account.cwl_attacks_left)
+            change_accounts_fast(account)
+            remaining = cwl_donations_ad_hoc(cwl=True)
+            print("REMAINING DONATIONS:", remaining)
+            if remaining == 0:
+                for a in accounts: a.cwl_donations_left = False
+            else:
+                for a in accounts: a.cwl_donations_left = True
+    elif status == "preparation":
+        for account in [account_1, ]:
+            change_accounts(account.number)
+            remaining = cwl_donations_ad_hoc(cwl=False)
+            print("REMAINING DONATIONS:", remaining)
+            if remaining == 0:
+                for a in accounts: a.cwl_donations_left = False
+            else:
+                for a in accounts: a.cwl_donations_left = True
     else:
-        dragon.donation_count = 1
-        freeze.donation_count = 1
-        edrag.donation_count = 5
-        ice_golem.donation_count = 1
-        ice_golem.donations = 0
+        for a in accounts: a.cwl_donations_left = False
 
-
-def war_donations_donate_troop(troop):
-    if not i_war_donate_reinforcements.find(fast=False):
-        i_war_donate.click()
-        time.sleep(0.1)
-    troop.i_donate2.click_region(WAR_DONATION_AREA)
+    for account in accounts:
+        change_accounts_fast(account)
+        account.update_resources(current_resources())
+        account.set_mode()
+        queue_up_troops(account)
 
 def war_donations_ad_hoc():
+    print("War donations ad hoc")
     goto(main)
     i_war.click()
     time.sleep(0.1)
@@ -140,13 +148,20 @@ def war_donations_ad_hoc():
         time.sleep(1)
         if not i_war_preparation.find():
             print("Couldn't find war preparation")
-            goto(pycharm)
-            return
+            goto(main)
+            return 0
     time.sleep(2)
-    if not i_war_castle.click() and not i_war_castle2.click():
-        print("Couldn't find castle")
-        goto(pycharm)
+
+    for x in range(5):
+        found = click_war_castle()
+        if found: break
+        time.sleep(1)
+
+    if not found:
+        print("Couldn't find castle - war donation ad hoc")
+        goto(main)
         return
+
     still_moving, count = True, 0
     while still_moving and count < 5:
         i_war_left.click()
@@ -191,33 +206,5 @@ def war_donations_ad_hoc():
         if i_war_right.colour() < 800: still_moving = False
         time.sleep(0.1)
         count += 1
-
-
-def remaining_donations():
-    result = war_donation_count.read(WAR_DONATION_COUNT, show_image=False)
-    x_pos = result.find("x")
-    try:
-        received = int(result[0:x_pos])
-        total = int(result[x_pos+1:])
-    except:
-        return 0
-    return total - received
-
-
-
-
-
-        # get_screenshot(TRADER_TIME, filename=f"tracker/trader_time")
-        # time.sleep(0.1)
-        # i_trader_close.click()
-
-    # time.sleep(2)
-    # get_screenshot(WAR_BANNER, filename=f"tracker/war_banner")
-    # print("Saved war banner")
-    #
-    # i_return_home_2.click()
-
-
-
-# war_donations()
-# war_prep()
+    pag.press("esc")
+    return remaining

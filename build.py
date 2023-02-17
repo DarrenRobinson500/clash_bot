@@ -5,7 +5,77 @@ from towers_load import *
 from tracker import *
 from utilities import *
 
+buildings_to_upgrade = [
+    "air_bomb", "air_defence", "air_mine", "air_sweeper", "archer_tower", "barracks", "bomb", "bomb_tower", "camp",
+    "cannon", "champ", "dark_barracks", "dark_drill", "dark_spell", "spell", "eagle", "elixir_storage",
+    "giant_bomb", "giga_tesla", "gold_storage", "inferno", "king", "lab", "mortar", "queen","skeleton",
+    "spell", "spring_trap", "sweeper", "tesla", "tornado", "warden", "war_machine", "wizard_tower", "x-bow",
+                        ]
+
+def build_new(account, village):
+    builders = spare_builders(account, village)
+    print("Build - spare builders", builders)
+    if builders == 0: return
+    # remove_trees(village)
+
+    desirable = buildings_to_upgrade
+    if account.needs_walls and account.build_cycle < 6:
+        desirable = ["wall", ]
+
+    print("Desirable:", desirable)
+
+    goto_list_top("main")
+    region = [BUILDER_FIRST_ROW[0], BUILDER_FIRST_ROW[1], BUILDER_FIRST_ROW[2], BUILDER_FIRST_ROW[3], ]
+    count, found = 0, False
+    time.sleep(0.5)
+    while count < 50:
+        next_row = get_screenshot(region)
+        # show(next_row, label=str(region[1]))
+        result = build_towers.read_screen(next_row, return_y=True)
+        if result[0] in desirable:
+            print("Found in desirable:", result[0])
+            print(result[0], region[1], count)
+            pag.click(region[0] + 30, region[1] + 50)
+            found = True
+            break
+        if result[1]:
+            print(result[0], region[1], count)
+            region[1] = result[1] + region[1]
+            count += 1
+            region[1] = region[1] + 35
+        else:
+            region[1] += 5
+        if region[1] > 660:
+            # print("Moving list")
+            gap, dur = 250, 1
+            pag.moveTo(855, 240 + gap)
+            pag.dragTo(855, 240, dur)
+            region[1] -= gap
+            time.sleep(0.5)
+
+    print("Summary", found, result[0])
+    if found:
+        if result[0] == "wall":
+            upgrade_wall("elixir", select_tower_bool=False)
+            account.build_cycle += 1
+            if account.build_cycle > 5: account.build_cycle = 0
+        else:
+            upgrade()
+
+        builders = spare_builders(account, village)
+        if builders > 0:
+            db_update(account, "build", datetime.now())
+
+        account.attacking = True
+        db_update(account, "attack", datetime.now() + timedelta(minutes=2))
+        # get_castle_resources()
+    return
+
+
+
+
 def build(account, village="main"):
+    return
     builders = spare_builders(account, village)
     print("Build - spare builders", builders)
     if builders == 0: return
@@ -293,9 +363,7 @@ def remove_trees(village):
             remove_tree(r, village)
 
 def upgrade():
-    # val, loc, rect = find(i_upgrade_button, get_screenshot(SELECTED_TOWER_BUTTONS, filename="upgrade"), show_image=False)
-    # print("Upgrade:", val)
-    rects = find_many("upgrade", confidence=0.75)
+    rects = i_upgrade_button.find_many()
     print("Upgrade - upgrade buttons found:", len(rects))
     if len(rects) == 0:
         rects = find_many("upgrade_2", confidence=0.75)
@@ -307,7 +375,9 @@ def upgrade():
     sufficient_funds = False
     print(rects)
     for rect in rects:
-        region = (rect[0] - 20, rect[1] - 110, 130, 40)
+        region = (rect[0] - 20, rect[1] - 50, 130, 40)
+        image = get_screenshot(region)
+        show(image)
         result = has_cash(region)
         if result:
             sufficient_funds = True

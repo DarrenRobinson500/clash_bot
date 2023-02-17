@@ -65,6 +65,7 @@ def war_get_status_image():
         return
     time.sleep(2)
     get_screenshot(WAR_BANNER, filename=f"tracker/war_banner")
+    get_screenshot(WAR_INFO, filename=f"tracker/war_info")
     print("Saved war banner")
 
     i_return_home_2.click()
@@ -96,20 +97,25 @@ def sweep(fast=False):
         get_resources()
         get_trader_info(account)
         if account.th > 5:
-            if not fast: donate(account)
+            if not fast: donate(account, account_0.mode)
         if not fast:
             account.update_resources(current_resources())
-            check_completion(account)
+            # check_completion(account)
         if account.building and not fast:
             build(account, "main")
         # check_trophies(account)
-        account.next_update()
+        account.update_lab_time()
+        account.update_build_time()
+        if account.building_b:
+            account.update_build_b_time()
+        # account.next_update()
         clock()
         get_resources()
+        account.update_build_time()
         if account.building_b and not fast:
             build(account, "builder")
         if account.th > 5 and not fast:
-            attack_b(account)
+            # just_attack_b(account)
             goto(builder)
             time.sleep(0.1)
         get_screenshot(REMAINING_ATTACKS, filename=f"tracker/remaining_attacks{account.number}")
@@ -157,8 +163,16 @@ def db_next_job_old():
 def run_job(job, sweep_period, games=False):
     print()
     print("Job:", job)
-    account, job, job_time = job
-    account = accounts[account - 1]
+    account_number, job, job_time = job
+    if job in ["build_b", ]:
+        db_update(account_number, job, datetime.now() + timedelta(hours=2), use_account_number=True)
+        return
+
+    account = get_account(account_number)
+    if account is None:
+        db_update(account_number, job, datetime.now() + timedelta(days=2), use_account_number=True)
+        return
+    # account = accounts[account - 1]
     job_time = string_to_time(job_time)
     if time_to_string(job_time) == "Now":
         if job == "sweep":
@@ -178,16 +192,15 @@ def run_job(job, sweep_period, games=False):
                 return
             if account.attacking:
                 change_accounts_fast(account)
-                print("Run job", account.army_troops)
+                # print("Run job", account.army_troops)
                 attack(account, account.army_troops)
             else:
                 db_update(account, job, datetime.now() + timedelta(hours=2))
         elif job == "donate":
-            if account.attacking or not account.donating():
-                db_update(account, job, datetime.now() + timedelta(days=1))
-                return
             change_accounts_fast(account)
-            donate(account)
+            donate(account, account_0.mode)
+            account.set_mode()
+            queue_up_troops(account)
             db_update(account, job, datetime.now() + timedelta(minutes=20))
         elif job == "research":
             if not account.researching:
@@ -198,16 +211,8 @@ def run_job(job, sweep_period, games=False):
             next_research(account)
             account.update_lab_time()
         elif job == "build":
-            if account.building:
-                change_accounts_fast(account)
-                goto(main)
-                build(account, "main")
-                goto_list_very_top("main")
-                time.sleep(0.2)
-                result = build_time.read(BUILDER_LIST_TIMES)
-                result = text_to_time_2(result)
-                account.next_build = result
-                db_update(account, "build", result)
+            build_new(account, "main")
+            account.update_build_time()
 
         # elif job == "build_b":
         #     change_accounts(account.number, "builder")
@@ -253,12 +258,16 @@ def run_job(job, sweep_period, games=False):
             job_time = datetime.now() + timedelta(hours=24)
             db_update(account, job, job_time)
             print(f"Job type '{job}' not coded yet.")
+        try:
+            account.set_mode()
+        except:
+            print("Run job - couldn't set mode. Account:", account)
     else:
         rest_time = job_time - datetime.now()
         print("Rest time:", rest_time)
         goto(pycharm)
         print_info()
-        if rest_time > timedelta(minutes=5):
+        if rest_time > timedelta(minutes=20):
             main.perform_action(main.sleep_path)
         else:
             time.sleep(rest_time.seconds)
@@ -286,15 +295,13 @@ def db_view_next():
             print(f"Account {account} ({village}) {spacer} {building} {time}")
 
 def print_info():
-    # print_locs()
-    # print_total_donations()
-    # print()
     for account in accounts:
+        account.set_mode()
         account.print_info()
     print()
-    db_view(no=1)
-    db_view_builds(no=5)
-    # print()
+    print("Mode:", account_0.mode)
+    db_view(no=5)
+    # db_view_builds(no=5)
 
 def print_info_old():
     db_view()

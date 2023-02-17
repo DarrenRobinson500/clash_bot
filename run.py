@@ -10,19 +10,13 @@ def run():
     next_sweep = datetime.now() + (datetime.min - datetime.now()) % sweep_period
     db_update(account_0, "sweep", next_sweep)
     games = False
-    # sweep()
     if not games:
+        war_status()
         for account in accounts:
-            print("Run:", account, account.attacking)
-            if account.attacking:
+            if account.mode in ["Attacking"]:
                 db_update(account, "attack", datetime.now() + timedelta(minutes=-20))
-            if account.donating():
+            if account.mode in ["Donating"]:
                 db_update(account, "donate", datetime.now() + timedelta(minutes=-20))
-
-    # db_update(account_0, "sweep", datetime.now() + timedelta(minutes=-10))
-
-    change_current_location(pycharm)
-    print_info()
 
     while True:
         run_job(db_next_job(), sweep_period, games=games)
@@ -55,7 +49,7 @@ def rapid_trophy_loss(account):
 
 def test2(account):
     screens = dir_to_list('attacks2')
-    print(screens)
+    # print(screens)
 
     count = 0
     max_count = 50
@@ -70,8 +64,6 @@ def test2(account):
             print(result)
             # show(result, 10000, screen, 0.7)
 
-
-
 def info_grab():
     for account in accounts:
         change_accounts_fast(account)
@@ -79,16 +71,59 @@ def info_grab():
             war_get_status_image()
         get_resources()
         if account.th > 5:
-            donate(account)
+            donate(account, account_0.mode)
             capital_coin()
         account.update_resources(current_resources())
         account.next_update()
         clock()
         get_resources()
 
+
+# goto(attacking_b)
+
+# goto(builder)
+# i_attack_b.click()
+# i_find_now.click()
+
+
+# attack_b(account_3, True)
+
+# for troop in troops:
+#     print(troop.name)
+#     print(troop.i_donate1)
+#     try:
+#         cv2.imshow("label", troop.i_donate1)
+#     except:
+#         print(f"No image for {troop}")
+
+
+# goto(main)
+
+def just_donate():
+    change_accounts_fast(account_1)
+    account_1.attacking = False
+    print("Account 1 donating: ", account_1.donating())
+    count = 0
+    while count < 60 * 2:
+        donate(account_1)
+        goto(main)
+        time.sleep(60)
+        count += 1
+
+def just_attack_b_all():
+    for account in accounts:
+        change_accounts_fast(account)
+        just_attack_b(account)
+
+# account = account_3
+# build_new(account, "main")
+# account.update_build_time()
+# just_attack_b_all()
 # sweep()
-wait(5)
 run()
 
-goto(pycharm)
 
+# donate(account_3)
+# build_new(account_3, "main")
+
+goto(pycharm)

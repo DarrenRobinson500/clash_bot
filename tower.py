@@ -1,5 +1,4 @@
-import os, cv2
-from datetime import datetime, timedelta
+from images import *
 
 files = os.listdir("images/towers") + os.listdir("images/towers_b")
 towers = []
@@ -24,11 +23,21 @@ class Tower():
         self.resource = resource
         self.priority = priority
         self.i_text = get_image_from_file(name, village, "")
+        self.images = []
         self.levels = []
         towers.append(self)
 
     def __str__(self):
         return f"{self.name}"
+
+    def get_images(self):
+        self.images = []
+        dir = f"towers/{self.name}/"
+        files = dir_to_list(dir)
+        for file in files:
+            new = Image(name=file, file='images/' + file + ".png", threshold=0.7)
+
+            self.images.append(new)
 
     def print_tower(self):
         print("Tower:", self.name)

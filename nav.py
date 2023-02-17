@@ -1,8 +1,7 @@
 import psutil
 
 from ocr import *
-from images import *
-from regions import *
+from towers_load import *
 
 ICONS = (300, 1012, 1200, 62)
 TOP_LEFT = (0,0,300,100)
@@ -16,7 +15,7 @@ def start_up():
     while not_there_yet:
         if not_there_yet:
             start_loop_again = False
-        for i in [i_ad_cross, i_maximise, i_start_eyes_2, i_start_eyes, i_heart, i_bluestacks]:
+        for i in [i_ad_cross, i_maximise, i_start_eyes, i_start_eyes_2, i_start_eyes_3, i_heart, i_bluestacks]:
             if start_loop_again: continue
             if i.find():
                 i.click()
@@ -89,7 +88,8 @@ class Loc():
                 parameter = cv2.imread(path, 0)
                 return parameter
             except:
-                print(f"Creating location: could not find {path}")
+                pass
+                # print(f"Creating location: could not find {path}")
 
     def __str__(self):
         if self.name:
@@ -145,8 +145,9 @@ class Loc():
             if parameter == "bottom_left":
                 pag.click(BOTTOM_LEFT)
             else:
+                # print("Click", path.parameter.find_detail())
+                # print("Loc - perform action - click:", path.parameter)
                 path.parameter.click()
-            # print("Click:", round(val,2))
         elif action == "click_p":
             time.sleep(0.1)
             path.parameter.click()
@@ -163,16 +164,17 @@ class Loc():
             # val, outcome = click(self.identifier_images[0])
             # print("Clicking identifier:", val)
         elif action == "reload":
-            print("Perform action - reload")
+            # print("Power down")
+            goto(main)
             close_app()
             rest_time = 20
             interval = 1
             end_time = time_to_string(datetime.now() + timedelta(minutes=20))
-            print(f"Resting: {end_time}")
+            print(f"Power down: {end_time}")
             for x in range(int(rest_time / interval)):
                 pag.moveTo(x * 10 * interval, 500)
                 time.sleep(60 * interval)
-            start_up()
+            open_app()
             outcome = True
         elif action == "key":
             pag.press(parameter)
@@ -195,7 +197,7 @@ class Loc():
             val, outcome = click_cv2("nav/boat_to")
         elif action == "goto_lab":
             pag.click(BOTTOM_LEFT)
-            for i_lab in labs:
+            for i_lab in lab.images:
                 val, x, rect = i_lab.find_detail(fast=False, show_image=False)
                 if val > i_lab.threshold:
                     i_lab.click()
@@ -224,7 +226,7 @@ class Loc():
             outcome = True
         elif action == "start_app":
             print("Action: start app")
-            start_up()
+            open_app()
             outcome = True
         elif action == "log_in":
             self.identifiers[0].click()
@@ -278,9 +280,6 @@ class Loc():
         path = [path for path in self.paths if path.destination == destination]
         if path: return True
         if self.default_path: return True
-        print("No path found:")
-        for x in self.paths:
-            print(x)
         return False
 
 
@@ -314,7 +313,7 @@ builder.add_identifier(i_otto)
 
 overlays = []
 for overlay in [i_another_device, i_ad_cross, i_ad_back, i_reload, i_reload_game, i_ad_cross, i_try_again, i_return_home, i_pre_app, i_okay, i_okay2, i_okay3, i_okay4, i_okay5,
-                i_next2, i_bluestacks_message_cross, i_return_home_2, i_return_home_3, i_red_cross, i_red_cross2, i_bluestacks_app]:
+                i_next2, i_bluestacks_message_cross, i_return_home_2, i_return_home_3, i_red_cross, i_red_cross2, i_red_cross3, i_bluestacks_app, ]:
     new_overlay = Loc(name=overlay.name[2:], identifier=overlay, accessible=False)
     if overlay == i_another_device:
         new_overlay.add_default_path(action="reload", parameter=None, expected_loc=main)
@@ -323,18 +322,22 @@ for overlay in [i_another_device, i_ad_cross, i_ad_back, i_reload, i_reload_game
         new_overlay.add_default_path(action="click_identifier", parameter=None,expected_loc=main)
     new_overlay.id_val_min = 0.8
     new_overlay.add_height(4)
+    if overlay == i_bad_daz: new_overlay.add_height(5)
     overlays.append(new_overlay)
 
+log_in2 = Loc(name="log_in", identifier=i_bad_daz)
+log_in2.add_default_path(action="click_identifier", parameter=None, expected_loc=main)
+
 log_in = Loc(name="log_in", identifier=i_log_in)
-log_in.add_default_path(action="log_in", parameter=None, expected_loc=main)
+log_in.add_default_path(action="click_identifier", parameter=None, expected_loc=log_in2)
 
 army_tab = Loc(name="army_tab", identifier=i_army_tab, accessible=True)
 troops_tab = Loc(name="troops_tab", identifier=i_troops_tab, accessible=True)
 spells_tab = Loc(name="spells_tab", identifier=i_spells_tab, accessible=True)
 siege_tab = Loc(name="siege_tab", identifier=i_siege_tab, accessible=True)
 
-lab = Loc(name="lab", identifier=i_research_upgrading, accessible=True)
-lab.add_identifier(i_lab_girl)
+l_lab = Loc(name="lab", identifier=i_research_upgrading, accessible=True)
+l_lab.add_identifier(i_lab_girl)
 
 l_games = Loc(name="games", identifier=i_games, accessible=True)
 l_castle = Loc(name="castle", identifier=i_treasury, accessible=True)
@@ -357,6 +360,7 @@ attacking_b_end_1 = Loc(name="attacking_b_end_1", identifier=i_surrender_okay, a
 
 # Start-up
 pycharm.add_default_path(action="pycharm_to_main", parameter=i_app, expected_loc=main, region=ICONS)
+# pycharm.add_default_path(action="pycharm_to_main", parameter=i_app, expected_loc=builder, region=ICONS)
 unknown.add_default_path(action="wait", parameter=0.2, expected_loc=main)
 no_bluestacks.add_default_path(action="start_bluestacks", parameter=None, expected_loc=main)
 no_app.add_default_path(action="start_app", parameter=None, expected_loc=main)
@@ -378,7 +382,7 @@ main.add_path(destination=find_a_match, action="click", parameter=i_attack, expe
 main.add_path(destination=n_attack, action="click_p", parameter=i_attack, expected_loc=n_attack)
 main.add_path(destination=attack_b2, action="goto_builder", parameter="", expected_loc=builder)
 main.add_path(destination=attacking_b, action="goto_builder", parameter="", expected_loc=builder)
-main.add_path(destination=lab, action="goto_lab", parameter="", expected_loc=lab)
+main.add_path(destination=l_lab, action="goto_lab", parameter="", expected_loc=l_lab)
 main.add_path(destination=l_games, action="goto_games", parameter="", expected_loc=l_games)
 main.add_path(destination=l_castle, action="goto_castle", parameter="", expected_loc=l_castle)
 
@@ -393,7 +397,7 @@ builder.add_path(destination=attacking_b, action="click", parameter=i_attack_b, 
 builder.add_default_path(action="goto_main", parameter='', expected_loc=main)
 
 # Research
-lab.add_default_path(action="key", parameter="esc", expected_loc=main)
+l_lab.add_default_path(action="key", parameter="esc", expected_loc=main)
 
 # Games
 l_games.add_default_path(action="key", parameter="esc", expected_loc=main)
@@ -447,12 +451,12 @@ attacking_b_end_1.add_default_path(action="click_identifier", parameter=None,exp
 
 def goto(destination):
     global current_location
-    print(f"Goto: {current_location} -> {destination}")
+    # print(f"Goto: {current_location} -> {destination}")
     if current_location == destination: return
     loop_count = 0
     path_found = True
     while current_location != destination and path_found and loop_count < 5 and current_location:
-        # print("Goto (loc):", current_location)
+        # print(f"Goto (loc): {current_location} => {destination}")
         path_found = current_location.has_path(destination)
         result = current_location.goto(destination)
         loop_count += 1
@@ -535,7 +539,7 @@ def loc(guess=None):
     return current_location
 
 def click_builder():
-    print("Click builder")
+    # print("Click builder")
     pag.click(BOTTOM_LEFT)
     for image in [i_builder, i_master, i_otto]:
         if image.find():
@@ -546,12 +550,12 @@ def click_builder():
 
 def move_list(direction, dur=0.5):
     if direction == "up":
-        pag.moveTo(855,666)
-        pag.dragTo(855,210, dur)
+        pag.moveTo(855,630)
+        pag.dragTo(855,250, dur)
     if direction == "down":
         # pag.press("s")
-        pag.moveTo(855,210)
-        pag.dragTo(855,666, dur)
+        pag.moveTo(855,250)
+        pag.dragTo(855,630, dur)
 
 def goto_list_top(village):
     if village == "main": goto(main)
@@ -573,7 +577,7 @@ def goto_list_top(village):
         count += 1
     time.sleep(2)
     val, loc, rect = i_suggested_upgrades.find_detail()
-    print("Goto list top", val)
+    # print("Goto list top", val)
     pag.moveTo(855, loc[1])
     pag.dragTo(855,210, .5)
     time.sleep(2)
@@ -673,10 +677,11 @@ def reset():
         time.sleep(15)
         i_start_eyes.click()
         i_start_eyes_2.click()
+        i_start_eyes_3.click()
         wait_and_click('maximise')
         wait_cv2("attack")
 
-def open_app():
+def open_app_old():
     global current_location
     success = False
     while not success:
@@ -693,16 +698,31 @@ def open_app():
         if current_location == "pycharm_running": current_location = None
         time.sleep(1)
 
+def open_app():
+    if i_bluestacks.find() and not i_bluestacks_big.find():
+        i_bluestacks.click()
+        time.sleep(0.3)
+    if i_bluestacks_big.find():
+        i_bluestacks_coc_icon.click()
+        i_bluestacks_coc_icon2.click()
+        time.sleep(2)
+
+    i_maximise.wait(dur=5)
+    val, loc, rect = i_maximise.find_detail(fast=False)
+    if loc[1] > 100:
+        i_maximise.click()
+    looking, count = True, 0
+    while looking and count < 60:
+        for image in [i_builder, i_otto, i_master]:
+            if image.find(): looking = False
+        time.sleep(1)
+        count += 1
+        print("Open app", count)
+
 def close_app():
-    val, loc, rect = find_cv2("nav/close_cross")
-    if val < 0.5:
-        click_cv2('bluestacks_icon')
-        time.sleep(0.2)
-    val, loc, rect = find_cv2("nav/close_cross")
-    if val > 0.6:
-        click_rect(rect)
-        time.sleep(0.2)
-        click_cv2("nav/close_close")
+    i_close_cross.click()
+    time.sleep(0.2)
+    i_close_close.click()
 
 def tour():
     goto(main)

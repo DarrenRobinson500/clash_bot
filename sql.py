@@ -34,7 +34,7 @@ def db_update(account, job, time, use_account_number=False):
     db_str = f"SELECT * FROM jobs WHERE account='{account_number}' and job = '{job}'"
     existing = len(db(db_str))
     # print("DB Update - Current records:", existing, account.number, job)
-    print(existing)
+    # print(existing)
     if existing == 1:
         # print("DB Update", account, job, time)
         db_str = f"UPDATE jobs SET time='{time}' WHERE account = {account_number} AND job = '{job}'"
@@ -55,7 +55,7 @@ def db_delete_job(job):
     db(db_str)
 
 def db_view(job='all', no=5):
-    output = db_get(job='all', no=no)
+    output = db_get(job=job, no=no)
     count = 0
     for x in output:
         if count < no:
@@ -90,7 +90,11 @@ def db_get(job='all', no=5):
     return output
 
 def db_read(account, job):
-    db_str = f"SELECT * FROM jobs WHERE account='{account.number}' AND job = '{job}' ORDER BY time"
+    try:
+        db_str = f"SELECT * FROM jobs WHERE account='{account.number}' AND job = '{job}' ORDER BY time"
+    except:
+        db_str = f"SELECT * FROM jobs WHERE account='{account}' AND job = '{job}' ORDER BY time"
+
     x = db(db_str)
     if len(x) == 1 and x[0][2] is not None and x[0][2] != "None":
         time = datetime.fromisoformat(x[0][2])
@@ -104,19 +108,19 @@ def initial_entries(accounts, zero_account):
     db_delete('all')
     time = datetime.now() + timedelta(days=0)
     for x in accounts:
-        for y in ["build", "research", "lose_trophies", "attack", "donate", "coin"]:
+        for y in ["build", "build_b", "research", "lose_trophies", "attack", "donate", "coin", ]:
             db_add(x, y, time)
     db_add(zero_account, "sweep", time)
     db_add(zero_account, "games", time)
 
 def add_entries():
     time = datetime.now() + timedelta(minutes=-20)
-    for x in range(1,4):
+    for x in range(1,3):
         for y in ["sweep"]:
             db_add(x, y, time)
 
 def add_entries_all():
-    print("add_entries all")
+    # print("add_entries all")
     time = datetime.now() + timedelta(minutes=-20)
     db_add(0, "games", time)
 
@@ -148,7 +152,6 @@ def db_next_job():
         return result[0]
 
 
-
 # db_create_table()
 # db_delete('all')
 # db_delete_table('jobs')
@@ -163,6 +166,6 @@ def db_next_job():
 # add_entries_all()
 # db_delete_job("'attack_b'")
 
-db_view(no=50)
-#
+# db_view(no=50)
+
 # db_next_job()

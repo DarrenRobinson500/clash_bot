@@ -10,8 +10,6 @@ troop_files = os.listdir("images/troops_new")
 troop_directory = 'images/troops_new/'
 slide_position = 1
 
-# print("Troop files:", troop_files)
-
 def get_image_from_file(troop, style):
     file = f'{troop}_{style}.png'
     if style == "": file = f'{troop}.png'
@@ -39,10 +37,11 @@ def get_super_troop(troop):
     sequence = ["super_boost/boost", "super_boost/boost_on", f"super_boost/{troop.name}", "super_boost/potion", "super_boost/dark", "super_boost/potion_small", "super_boost/dark2", ]
     for image in sequence:
         time.sleep(0.5)
+        if image == "super_boost/super_minion":
+            pag.moveTo(1070, 928)
+            pag.dragTo(1070, 287, .6)
         val, loc, rect = find_cv2(image)
-        print(image, val)
         if val > 0.6:
-            print("Click")
             click_rect(rect)
     pag.press("esc")
 
@@ -93,8 +92,6 @@ class Troop():
 
     def start_train(self, count, move_to_start=False):
         global slide_position
-        print("Start train:", self.name, self.type, count)
-        # Set up
         if self.type == "troop":
             goto(troops_tab)
             slide(slide_position, self.slide)
@@ -112,11 +109,9 @@ class Troop():
             for x in range(count):
                 click_rect(rect, region=TRAIN_RANGE)
         # val, outcome = click(self.train, region=TRAIN_RANGE, show_image=False)
-        print("Create troop:", self.name, round(val,2))
         if move_to_start:
             move_to_queue_start(self)
 
-        print("Start train:", self.name, count)
         return self.training_time * count
 
     def delete(self, count):
@@ -152,19 +147,12 @@ def load_troops():
             donation_count = 10
             donations = 1
 
-        print("Creating troop:", name)
+        # print("Creating troop:", name)
         Troop(name=name, type=type, slide=slide, training_time=training_time, donate_bool=donate_bool,
               donate_preference=donate_preference, donations=donations, donation_count=donation_count)
 
-    print()
 
 load_troops()
-
-# print()
-# for name, type, slide, training_time, donate_bool, donate_preference, donations, donation_count in troop_data:
-#     print("Creating troop:", name)
-#     Troop(name=name, type=type, slide=slide, training_time=training_time, donate_bool=donate_bool,
-#           donate_preference=donate_preference, donations=donations, donation_count=donation_count)
 
 barb = next((x for x in troops if x.name == 'barb'), None)
 archer = next((x for x in troops if x.name == 'archer'), None)
@@ -184,6 +172,8 @@ lava_hound = next((x for x in troops if x.name == 'lava_hound'), None)
 ice_golem = next((x for x in troops if x.name == 'ice_golem'), None)
 
 super_barb = next((x for x in troops if x.name == 'super_barb'), None)
+super_minion = next((x for x in troops if x.name == 'super_minion'), None)
+# super_minion.slide = 2
 
 lightening = next((x for x in troops if x.name == 'lightening'), None)
 heal = next((x for x in troops if x.name == 'heal'), None)
@@ -254,7 +244,6 @@ def drag(a, b):
 
 def slide(slide_pos, slide_pos_target):
     time.sleep(0.2)
-    print(f"Slide from {slide_pos} to {slide_pos_target}")
     if slide_pos == slide_pos_target:
         return slide_pos
 
@@ -276,10 +265,8 @@ def slide(slide_pos, slide_pos_target):
 def merge_troop_regions():
     for image_type in ["donate1", "donate2"]:
         all_images = [x for x in images if image_type in x.name]
-        print("List of images")
         for image in all_images: print(image.name)
 
-        print("Adding regions")
         for image1 in all_images:
             for image2 in all_images:
                 if image1 == image2: continue
@@ -287,8 +274,6 @@ def merge_troop_regions():
                     if region not in image2.regions:
                         image2.save_region(region)
 
-        print(all_images)
-        for image in all_images: print(image.name)
 
 # log_thrower.i_donate2.show_regions()
 

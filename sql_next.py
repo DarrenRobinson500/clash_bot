@@ -4,7 +4,7 @@ from bot import *
 def db(db_str):
     con = sqlite3.connect('data.db')
     c = con.cursor()
-    print(db_str)
+    # print(db_str)
     c.execute(db_str)
     output = c.fetchall()
     con.commit()
@@ -52,26 +52,8 @@ def db_clear(accounts=[1,2,3], villages=["main", "village"]):
             db_update(account, village, "")
 
 
-# db_delete_table('next')
-
-# db_update(1, "main", "archer_tower")
-# db_update(1, "builder", "lava")
-# db_update(2, "main", "cannon")
-# db_clear()
-
-
-# db_update_next(1, "main", "none", 0)
-
-# db_update_next(1,"main","elixir", "none")
-# db_update_next(2,"main","elixir", "none")
-# db_update_next(3,"main","elixir", "none")
-# db_update_next(1,"builder","gold", "none")
-# db_update_next(2,"builder","dark", "none")
-# db_update_next(1,"main","elixir1", "none")
-# db_update_next(3,"main","gold", "none")
-db_update_next(1,"main","dark", "none")
 
 # db_create_table()
 # initial_entries()
 # next_build()
-db_view_next()
+# db_view_next()

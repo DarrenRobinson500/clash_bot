@@ -21,7 +21,7 @@ def get_screenshot(region=None, colour=0, filename="temp"):
 
 def find(image, screen, text="", show_image=False):
     if image is None:
-        print("Find - No image provided:", text)
+        # print("Find - No image provided:", text)
         return 0,0,0
     if show_image:
         show(image)
@@ -688,6 +688,9 @@ def check_loc_th(loc_th):
         time.sleep(1)
         pag.keyUp('w')
         loc_th = th_b()
+    if loc_th is None:
+        loc_th = (1000,500)
+        print("Failed to find TH - used default of 1000,500")
     return loc_th
 
 def get_spots(a, b, n):
@@ -782,9 +785,9 @@ def objects_b(loc_th):
     return attack_a, attack_b
 
 def ram_drop_point(account, img):
-    print("Ram drop point")
+    # print("Ram drop point")
     if img is None:
-        print("Ram drop point - Create double screen didn't return image")
+        # print("Ram drop point - Create double screen didn't return image")
         return
 
     img_orig = img.copy()
@@ -800,7 +803,7 @@ def ram_drop_point(account, img):
         result_eagle = True
     x_eagle, y_eagle = pag.center(rect)
 
-    # print("Ram drop point - TH and Eagle results", result_th, result_eagle)
+    print("Ram drop point - TH and Eagle results", result_th, result_eagle)
     if not (result_eagle and result_th):
         # print("Ram drop point - Couldn't find TH or Eagle")
         return
@@ -827,11 +830,15 @@ def ram_drop_point(account, img):
     cv2.line(img_orig, top, left, (255,255,255), 2)
     cv2.line(img_orig, bottom, left, (255,255,255), 2)
 
+    show(img_orig)
+
     # save the image
     post = datetime.now().strftime('%I%M%p')
     x = f'images/attacks{account.number}/attack {post}.png'
+
     cv2.imwrite(x, img_orig)
     cv2.imwrite("temp/attack.png", img_orig)
+    print("Ram drop point image saved", x)
 
     return best_dp
 
@@ -880,6 +887,7 @@ def get_drop_points(account, img, center, target_locs):
     # save the image
     post = datetime.now().strftime('%I%M%p')
     x = f'images/attacks{account.number}b/attack {post}.png'
+
     cv2.imwrite(x, img)
     # print("Get drop points - save the image:", x)
 

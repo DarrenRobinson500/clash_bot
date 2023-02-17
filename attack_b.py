@@ -1,7 +1,7 @@
 from bot import *
 
 OBJECTS_B = dir_to_list('attack_b')
-print(OBJECTS_B)
+# print(OBJECTS_B)
 
 def get_screen():
     goto(attacking_b)

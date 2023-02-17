@@ -203,23 +203,23 @@ def run_games(accounts):
         game = get_current_game(account)
         # print("1", account.current_game)
         if not game:
-            print(account, "No")
+            # print(account, "No")
             game = choose_game(account)
-            print(account, "No. Chose:", game)
+            # print(account, "No. Chose:", game)
         # print("2", account.current_game)
         if game:
-            print(account, "Yes")
+            # print(account, "Yes")
             game.run(account)
         create_combined_games_image(accounts)
 
-for account in accounts:
-    current_game_name = db_games_read(account.number)
-    current_game = return_game(current_game_name)
-    if current_game:
-        print(account, current_game.name)
-    else:
-        print(account, None)
-    account.current_game = current_game
+# for account in accounts:
+#     current_game_name = db_games_read(account.number)
+#     current_game = return_game(current_game_name)
+#     if current_game:
+#         print(account, current_game.name)
+#     else:
+#         print(account, None)
+#     account.current_game = current_game
 
 # for game in games:
 #     print(game.name)

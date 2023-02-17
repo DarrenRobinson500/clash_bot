@@ -6,7 +6,7 @@ number_sets = []
 
 class Number():
     def __init__(self, name, directory, confidence=0.75):
-        print("Creating number set:", name)
+        # print("Creating number set:", name)
         self.name = name
         self.numbers = []
         self.confidence = confidence
@@ -17,21 +17,6 @@ class Number():
             self.numbers.append((x, image))
         number_sets.append(self)
 
-    # def __init__(self, name, directory, number_array):
-    #     self.name = name
-    #     self.numbers = []
-    #
-    #     files = os.listdir(directory)
-    #     print("Creating number set:", name)
-    #     for x in number_array:
-    #         file = f'{x}.png'
-    #         if file in files:
-    #             image = cv2.imread(f'{directory}/{x}.png', 0)
-    #             self.numbers.append((x, image))
-    #         else:
-    #             print(f"Adding number image: could not find f'{directory}/{x}.png'")
-    #     number_sets.append(self)
-
     def show_numbers(self):
         for x, i in self.numbers:
             show(i, label=str(x))
@@ -41,9 +26,11 @@ class Number():
         screen = cv2.imread(f"temp/number_set.png", 0)
         return self.read_screen(screen, show_image=show_image, return_number=return_number)
 
-    def read_screen(self, screen, show_image=False, return_number=False, show_rectangles=False):
+    def read_screen(self, screen, show_image=False, return_number=False, return_y=False):
         found = []
+        y_coords = None
         for number, image in self.numbers:
+            # print(number)
             h, w = image.shape
             # print(image.shape)
             result = cv2.matchTemplate(screen, image, method)
@@ -56,8 +43,10 @@ class Number():
             z = zip(xloc, yloc)
             rectangles = []
             for (x, y) in z:
+                # print("Read number x and y:", x, y)
                 rectangles.append([int(x), int(y), int(w), int(h)])
                 rectangles.append([int(x), int(y), int(w), int(h)])
+                y_coords = y
             rectangles, weights = cv2.groupRectangles(rectangles, 1, 0.2)
 
             if len(rectangles) > 0:
@@ -87,18 +76,22 @@ class Number():
             except:
                 result = 0
 
-
+        if return_y:
+            return result, y_coords
         return result
 
 
 resource_numbers = Number(name="resource_numbers", directory="numbers/resources")
+available_resource_set = Number(name="available_resource", directory="numbers/available_resources", confidence=0.85)
 cost_numbers = Number(name="cost_numbers", directory="numbers_cost", confidence=0.85)
 tower_count = Number(name="tower_count", directory="numbers/tower_count", confidence=0.85)
 build_time = Number(name="build_time", directory="numbers/time")
 research_time = Number(name="research_time", directory="numbers/research", confidence=0.85)
+army_time = Number(name="army_time", directory="numbers/army_time", confidence=0.85)
 troop_numbers = Number(name="troop_numbers", directory="numbers/troop_count")
 selected_level = Number(name="selected_level", directory="numbers/levels", confidence=0.9)
 selected_tower = Number(name="selected_tower", directory="numbers/towers", confidence=0.9)
 trophies = Number(name="trophies", directory="numbers/trophies", confidence=0.85)
 coin_time = Number(name="coin_time", directory="numbers/coin")
 war_donation_count = Number(name="war_donation_count", directory="numbers/war_donation_count", confidence=0.85)
+build_towers = Number(name="build_towers", directory="numbers/build_towers", confidence=0.85)

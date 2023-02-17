@@ -46,13 +46,13 @@ def progress(account, tower_level):
         print("Progress - row or column error", tower, level, row, column)
         return
     if sheet.cell(row, column).value and sheet.cell(row, column).value > 0:
-        print("Progress success")
+        # print("Progress success")
         sheet.cell(row, column).value = excel(sheet.cell(row, column).value) - 1
         sheet.cell(row, column + 1).value = excel(sheet.cell(row, column + 1).value) + 1
         wb.save(file)
         wb.close()
 
-    print("Progress:", tower, row, column)
+    # print("Progress:", tower, row, column)
 
 def excel(value):
     if not value: value = 0
@@ -65,8 +65,8 @@ def excel_write_tracker(account, tower_level, value):
     sheet = wb[str(account.number)]
     row = next((x[1] for x in tower_cells if x[0] == tower), None)
     column = next((x[1] for x in level_cells if x[0] == level), None)
-    print(tower_cells)
-    print(level_cells)
+    # print(tower_cells)
+    # print(level_cells)
     print("Excel write tracker:", tower, row, column)
     print("Value", sheet.cell(row, column).value)
     sheet.cell(row, column).value = value
@@ -141,7 +141,7 @@ def excel_write_next():
                 # time_due = string_to_time(time_due)
                 # time_due = time_to_string(time_due)
                 sheet.cell(row, column).value = time
-                print("Account:", account_no, " Job:", job, "Time:", time)
+                # print("Account:", account_no, " Job:", job, "Time:", time)
     wb.save(file)
     wb.close()
 
@@ -157,4 +157,4 @@ def excel_write_next():
     # print("Value", sheet.cell(row, column).value)
     # sheet.cell(row, column).value = value
 
-excel_write_next()
+# excel_write_next()

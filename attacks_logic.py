@@ -1,76 +1,69 @@
 from account import *
 from lose_trophies import *
 from donate import *
+from people import *
 
 def return_account(number):
     return next((x for x in accounts if x.number == number), None)
 
 # === 3. ATTACK ===
+
+def just_attack_b(account):
+    still_attacking = True
+    while still_attacking:
+        result = attack_b(account)
+        if result:
+            still_attacking = False
+
 def attack_b(account, attack_regardless=False):
-    start_time = datetime.now()
     goto(builder)
-    # print("A0", datetime.now() - start_time)
-    # screen = get_screenshot(ATTACK_BUTTON)
-    # print("A1", datetime.now() - start_time)
     if not attack_regardless:
         if i_attack_b_0.find():
-            print("Attack b - Not ready for attack")
-            return
-    print("Going to attacking b")
-    print("B", datetime.now() - start_time)
+            # print("Attack b - Not ready for attack")
+            return "No attacks left"
     result = goto(attacking_b)
+    if i_watch.find():
+        time.sleep(5)
+        return
     if result != attacking_b:
         print("Couldn't get to attack screen")
         return
 
-    print("Attack b - Ready for attack")
-    print("C", datetime.now() - start_time)
     time.sleep(0.5)
     attack_b_get_screen()
     loc_th = th_b()
     loc_th = check_loc_th(loc_th)
-    if loc_th is None:
-        time.sleep(60)
-        goto(main)
-        return
+    # if loc_th is None:
+    #     time.sleep(60)
+    #     goto(main)
+    #     return
     a, b = objects_b(loc_th)
-    print("D", datetime.now() - start_time)
     for troop, n, loop in account.army_troops_b:
         result = place_b(troop, a, b, n, loop)
         if result == "No spots":
             print("Attack b - no spots")
             break
-    troops_left = True
-    count = 0
-    print("E", datetime.now() - start_time)
 
-    while troops_left and count <= 5 and result != "No spots":
-        troops_left = check_all_troops_used(a, b)
-        count += 1
-        print(count)
-        if i_okay4.find(): troops_left = False
+    check_all_troops_used(a, b)
+    still_going = True
+    while still_going:
+        if i_okay4.find(): still_going = False
+        time.sleep(1)
+
     i_okay4.click()
     goto(builder)
     return
 
 def check_all_troops_used(a, b):
     print("Check all troops used")
-    troops_left = False
-    for x in ATTACK_B_TROOPS:
-        rects = find_many("attack_b/" + x, confidence=0.7)
-        print(rects)
-        for rect in rects:
-            small_rect = [rect[0] + 10, rect[1] + 10, rect[2] - 20, rect[3] - 20]
-            result = check_colour_rect(small_rect)
-            print(x, result)
-            if result:
-                troops_left = True
-                place_b(x, a, b, 5, 1)
-    return troops_left
+    for x in [i_barb, i_bomber, i_giant, i_pekka, i_cannon, i_machine]:
+        place_b(x, a, b, 5, 1)
+    return
 
 def place_b(troop, a, b, n, loops=1):
-    # print("Place B")
-    click_cv2("attack_b/" + troop)
+    print("Place B", a, b, n, troop)
+    troop.click()
+    # click_cv2("attack_b/" + troop)
     spots = get_spots(a,b,n)
     if spots is None:
         return "No spots"
@@ -79,6 +72,7 @@ def place_b(troop, a, b, n, loops=1):
     for _ in range(loops):
         for spot in spots:
             # print("Place b:", spot)
+            spot = (max(spot[0],275), spot[1])
             pag.click(spot)
         time.sleep(0.5)
 
@@ -93,32 +87,24 @@ def get_time_attack():
         result = datetime.now() + timedelta(minutes=20)
     return result
 
-
-
 def attack(account, data, siege_required=True, attack_regardless=False):
-    print("Attack", account.army_troops)
-    print("Attack - initial troops 1:", objects_to_str(data['initial_troops']))
+    db_update(account, "attack", datetime.now() + timedelta(minutes=5))
     account.update_resources(current_resources())
     if not attack_regardless:
         if not account.attacking:
-            print(f"{account} not attacking")
+            # print(f"{account} not attacking")
             db_update(account, "attack", datetime.now() + timedelta(hours=5))
             return
-    print("Attack Start. Resources", account.gold, account.dark)
-    print("Attack - initial troops 2:", objects_to_str(data['initial_troops']))
     goto(main)
     db_update(account, "attack", datetime.now() + timedelta(minutes=5))
 
     # Attack Prep
-    result = attack_prep(account, data, siege_required=siege_required)
+    result = attack_prep(account, siege_required=account.requires_siege)
     if not result:
         print("attack: Troops not ready")
-        db_update(account, "attack", get_time_attack())
+        db_update(account, "attack", text_to_time_2(army_time.read(region=ARMY_TIME, show_image=False)))
         return
 
-    # Find a match
-    print("Attack")
-    print("Attack - initial troops 3:", objects_to_str(data['initial_troops']))
     goto(find_a_match)
     match_found = False
     war_goals = account.war_goals()
@@ -126,12 +112,9 @@ def attack(account, data, siege_required=True, attack_regardless=False):
         assessment = assess_village(account, data, war_goals)
         if assessment[0] == "Good to go":
             match_found = True
-            print(assessment[0])
-
         elif assessment == "Not on attack screen":
             return
         else:
-            print(assessment)
             result = next_village()
             if result == "Not on attack screen":
                 return
@@ -144,12 +127,16 @@ def attack(account, data, siege_required=True, attack_regardless=False):
         drop_points = assessment[2]
         launch_attack_dps(account, data, image, drop_points)
     else:
-        print("Attack - initial troops 4:", objects_to_str(data['initial_troops']))
+        # print("Attack - initial troops 4:", objects_to_str(data['initial_troops']))
         launch_attack(account, data, image)
 
     # Finish attack
     finish_attack(account, data)
-    attack_prep(account, data)
+    invite_latest_attackee()
+    account.update_resources(current_resources())
+    army_prep(account, account.troops_to_build, army_or_total="total", extra=True)
+
+    # attack_prep(account, data)
     if data['name'] != "goblins": # Ask for donations (if not goblins)
         request(account)
     if data['name'] != "goblins": # Short check time (if goblins)
@@ -158,89 +145,27 @@ def attack(account, data, siege_required=True, attack_regardless=False):
     time.sleep(.2)
     return
 
-def attack_prep(account, data, war=False, siege_required=True):
-    print("Attack prep:", account.army_troops)
-    # print("War", war)
-    # if war:
-    #     data = account.war_troops
-    # else:
-    #     data = account.army_troops
-    print("Attack_prep", data)
-    print("Attack prep")
+
+def convert_attack_to_troops(data):
+    troops_required = data['initial_troops'] + data['final_troops']
+    for x, no in data['troop_group']:
+        troops_required += [x] * no * data['troop_groups']
+    troops_required += [lightening] * data['lightening']
+
+    return troops_required
+
+
+def attack_prep(account, siege_required=True):
     goto(army_tab)
 
-    # Get required troops
-    sufficient_troops = True
-    troops_required = []
-    troops_to_build = []
-    print("Initial troops:", data['initial_troops'])
-    for x in data['initial_troops']:
-        print("Initial troops:", x)
-        troops_required.append(x)
-    for x, no in data['troop_group']:
-        print("Troop group:", x, no)
-        for y in range(data['troop_groups'] * no):
-            troops_required.append(x)
-    for x in data['final_troops']:
-        troops_required.append(x)
-    if account.th >= 5:
-        for x, no in data['spells']:
-            for y in range(no):
-                troops_required.append(x)
+    army_prep(account, account.troops_to_build, army_or_total="total")
+    sufficient_troops, actual_troops = army_prep(account, account.troops_to_build, army_or_total="army")
+    if not sufficient_troops: return sufficient_troops
 
-    required_lightening = data['lightening']
-    troops_required += [lightening] * required_lightening
-    print("Attack prep - required troops:", troop_str(troops_required))
-    requ = Counter(troops_required)
-    time.sleep(0.2)
-
-    # Get actual troops
-    actual_troops = army_count(account)
-    if actual_troops == "Still training": return False
-    # print("Actual troops:", actual_troops)
-
-    # Create needed troops
-    print("Create required troops")
-    sufficient_troops = True
-    for x in requ:
-        if x.type != "hero" and x.type != "siege":
-            print("Troop:", x.name)
-            actual = actual_troops[x]
-            required = requ[x]
-            if actual < required:
-                if x.type != "spell":
-                    sufficient_troops = False
-                text = f"Need more of these - make {required - actual} more"
-                print(x, required, actual, text)
-                troops_to_build += [x] * (required - actual)
-
-    # Delete unneeded troops
-    if not sufficient_troops:
-        print("Delete unneeded troops")
-        backlog_deleted = False
-        for x in troops:
-            # print(x)
-            actual = actual_troops[x]
-            required = requ[x]
-            if actual > required and x.type != "siege":
-                print("Attack prep - delete unneeded", x.name, required, actual)
-                if not backlog_deleted: troop_delete_backlog()
-                backlog_deleted = True
-                x.delete(actual - required)
-
-    if account.has_siege:
-        for x in range(5):
-            troops_to_build.append(log_thrower)
-    print("Attack prep:", troop_str(troops_to_build))
-    if war: extra = False
-    else: extra = True
-    restock(troops_to_build, account, extra=extra)
-
-    if siege_required:
-        if not account.has_siege and actual_troops[log_thrower] != 1 and account.th > 8:
-            sufficient_troops = False
-            request(account)
-            db_update(return_account(1), "donate", datetime.now())
+    if siege_required and not account.has_siege and actual_troops and actual_troops[log_thrower] != 1 and account.th > 8:
+        sufficient_troops = False
+        request(account)
+        db_update(return_account(1), "donate", datetime.now())
 
     print("Attack prep - sufficient troops", sufficient_troops)
     return sufficient_troops
@@ -265,7 +190,7 @@ def check_towers(towers, img, return_image=False):
 def assess_village(account, data, war_goals):
     start_time = datetime.now()
     global DP
-    print("Assess village")
+    # print("Assess village")
     time.sleep(0.5)
     # zoom_out()
 
@@ -277,8 +202,8 @@ def assess_village(account, data, war_goals):
     # Resource Check
     resources = available_resources()
     required = war_goals
+    print("Assess village (resources vs required):", resources, required)
     if resources[0] < required[0] or resources[1] < required[1] or resources[2] < required[2]:
-        print("Assess village:", resources, required)
         return "Insufficient resources"
 
     # Advanced Town Hall
@@ -431,9 +356,9 @@ def launch_attack(account, data, image):
     wait_cv2("return_home")
 
 def place(troop, count_total, dp=[400,400], troop_pause=0):
-    dp1 = (dp[0],min(dp[1],815))
+    dp1 = (max(dp[0], 275), min(dp[1],815))
     val, loc, rect = find(troop.i_attack.image, get_screenshot(TROOP_ZONE))
-    print("Place troops:", troop, val, loc)
+    print("Place troops:", troop, val, loc, ". Drop point:", dp1)
     if val > 0.63:
         click(troop.i_attack.image, TROOP_ZONE)
         time.sleep(.2)
@@ -473,7 +398,7 @@ def place_line(troop, count_total, dp1, dp2, troop_pause=0):
             prop2 = (1 - prop)
             x = int(dp1[0] * prop + dp2[0] * prop2)
             y = int(dp1[1] * prop + dp2[1] * prop2)
-            print(troop, dp1, dp2, count, prop, prop2, x, y)
+            # print(troop, dp1, dp2, count, prop, prop2, x, y)
             pag.click(x,y)
             time.sleep(troop_pause)
 
@@ -491,7 +416,8 @@ def bomb_mult(coords, count):
     for x in range(count):
         pag.click(pag.center(coords))
 
-def bomb(targets):
+def bomb(tower_to_bomb):
+    targets = tower_to_bomb.images
     spells, loc = has_spells()
     lightening.i_army.click()
     print("Bomb (initiwsal):", spells)
@@ -526,6 +452,9 @@ def finish_attack(account, data):
     current_location = "return_home"
     goto(main)
     account.update_resources(current_resources())
+    time = text_to_time_2(army_time.read(region=ARMY_TIME, show_image=False))
+    db_update(account, "attack", time)
+
 
 # def log(var, account, no):
 #     time = datetime.now().strftime('%d %b %I:%M%p')

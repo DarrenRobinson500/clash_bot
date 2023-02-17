@@ -8,10 +8,12 @@ To Do
 # http://www.graphviz.org/content/cluster
 
 digraph G {
+    constants -> object_recognition
     object_recognition -> ocr
     {ocr, images, regions} -> nav
     ocr -> sql
     {member, nav} -> troops
+    {images} -> tower
     tower -> towers_load
     troops -> attacks
     {attacks, sql} -> account

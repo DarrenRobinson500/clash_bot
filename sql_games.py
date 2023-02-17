@@ -35,7 +35,7 @@ def db_games_view():
     output = db(db_str)
     for account, game in output:
         if game == "": game = None
-        print(f"Account {account}: {game}")
+        # print(f"Account {account}: {game}")
 
 def db_games_read(account):
     db_str = f"SELECT * FROM games WHERE account='{account}'"
